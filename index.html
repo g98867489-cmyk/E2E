@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
 <title>Notes</title>
 <link rel="icon" href="data:," />
 <style>
@@ -484,9 +484,7 @@
       <div id="log"></div>
       <div id="emojiBar"></div>
       <div id="typing">typing…</div>
-      <div id="kb" style="display:none;">
-        <div id="kbRows"></div>
-      </div>
+      <div class="rec-tip" id="restrictBar" style="display:none; color:var(--muted);">waiting for admin approval — you cannot send yet</div>
       <div class="rec-tip" id="recTip">recording…</div>
       <div id="composer">
         <button id="emojiBtn" title="Emoji">
@@ -506,6 +504,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
+      <div id="kb" style="display:none;">
+        <div id="kbRows"></div>
+      </div>
     </div>
   </main>
 </div>
@@ -519,6 +520,8 @@
     <button class="btn" id="broadcastBtn" style="margin-top:4px;">Send broadcast</button>
     <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Online users</div>
     <div id="adminOnline" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
+    <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Removed users (need approval)</div>
+    <div id="adminRemoved" style="max-height:110px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"><div style="font-size:0.7rem; color:var(--dim);">none</div></div>
     <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Recently seen</div>
     <div id="adminSeen" style="max-height:100px; overflow-y:auto; font-size:0.72rem; color:var(--muted);"></div>
     <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Banned users</div>
@@ -605,8 +608,7 @@
     <div class="ball"></div>
     <div class="ring-front"></div>
   </div>
-  <h2>Saturn Lock</h2>
-  <div class="locksub">🔒 chat locked — enter passkey to unlock</div>
+  <h2>Saturn</h2>
   <div class="facts">
     <div class="fact"><span>🔭</span><div><b>Discovered by</b>Galileo Galilei first observed Saturn through a telescope in 1610 — but the rings looked blurry to him. In 1655, Christiaan Huygens figured out they were rings.</div></div>
     <div class="fact"><span>🌍</span><div><b>Distance from Earth</b>Closest ~1.2 billion km, farthest ~1.7 billion km (average ~1.4 billion km). Sunlight from Saturn takes about 80 minutes to reach Earth.</div></div>
@@ -616,7 +618,7 @@
     <div class="fact"><span>💧</span><div><b>Fun fact</b>Its density is lower than water — it would float in a big enough ocean!</div></div>
   </div>
   <div class="passkey-row">
-    <input type="password" id="passkey" placeholder="enter passkey" autocomplete="off" />
+    <input type="password" id="passkey" placeholder="••••" autocomplete="off" />
     <button class="unlock-btn" id="unlockBtn">Unlock</button>
   </div>
 </div>
@@ -814,6 +816,7 @@
         this.adminName = msg.adminName || null;
         if (msg.passkey) this._emit('passkey', msg.passkey);
         if (msg.muted) this._emit('muted-list', msg.muted);
+        this._emit('restricted', !!msg.restricted);
         return this._emit('open', msg.id);
       }
       if (msg.type === 'error') return this._emit('error', new Error(msg.error));
@@ -824,6 +827,8 @@
       if (msg.type === 'ok') return this._emit('ok', msg);
       if (msg.type === 'broadcast') return this._emit('broadcast', msg);
       if (msg.type === 'kicked') return this._emit('kicked');
+      if (msg.type === 'removed') return this._emit('removed');
+      if (msg.type === 'approved') return this._emit('approved');
       if (msg.type === 'muted-list') return this._emit('muted-list', msg.ids || []);
       if (msg.type === 'stats') return this._emit('stats', msg);
       if (msg.type === 'force-rename') return this._emit('force-rename', msg.name);
@@ -1067,7 +1072,7 @@ function entryToDom(entry) {
     if (entry.w === 'me' && entry.mid) {
       var tk = document.createElement('span');
       tk.className = 'ticks';
-      tk.textContent = entry.read ? '✓✓' : '✓';
+      tk.textContent = entry.pending ? '⏳' : (entry.read ? '✓✓' : '✓');
       body.appendChild(tk);
     }
     d.appendChild(body);
@@ -1258,6 +1263,7 @@ function wireConn(c) {
   var name = c.remoteId;
   ensureContact(name);
   c.on('open', function () {
+    flushQueue(name);
     if (activeChat === name) updateChatStatus(name);
     if (!chats[name] || !chats[name]._greeted) {
       chats[name] = chats[name] || { list: [], unread: 0 };
@@ -1426,9 +1432,57 @@ function showTyping(from) {
    ================================================================ */
 function newMid() { return myName + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7); }
 
+var LS_QUEUE = 'e2e.queue';
+function loadQueue() { try { return JSON.parse(localStorage.getItem(LS_QUEUE)) || {}; } catch (_) { return {}; } }
+function saveQueue(q) { try { localStorage.setItem(LS_QUEUE, JSON.stringify(q)); } catch (_) {} }
+function queueMsg(to, text, mid) {
+  var q = loadQueue();
+  q[to] = q[to] || [];
+  q[to].push({ t: text, mid: mid });
+  saveQueue(q);
+}
+function markMidsDelivered(store, items) {
+  var mids = items.map(function (m) { return m.mid; });
+  var changed = false;
+  store.list.forEach(function (e) {
+    if (e.pending && mids.indexOf(e.mid) !== -1) { e.pending = false; changed = true; }
+  });
+  return changed;
+}
+function flushQueue(name) {
+  var q = loadQueue();
+  if (q[name] && q[name].length) {
+    var c = connFor(name);
+    if (c && c.open) {
+      var items = q[name];
+      delete q[name];
+      saveQueue(q);
+      items.forEach(function (m) { try { c.send({ t: m.t, mid: m.mid }); } catch (_) {} });
+      if (chats[name] && markMidsDelivered(chats[name], items)) { saveHistory(); if (activeChat === name) renderChatLog(name); }
+    }
+  }
+  var gq = {};
+  Object.keys(q).forEach(function (gname) {
+    var g = groups[gname];
+    if (!g || g.members.indexOf(name) === -1 || !q[gname].length) return;
+    gq[gname] = q[gname];
+    delete q[gname];
+    saveQueue(q);
+    g.members.forEach(function (m) {
+      if (m === myName) return;
+      var mc = connFor(m);
+      if (mc && mc.open) gq[gname].forEach(function (msg) { try { mc.send({ g: gname, gm: g.members, t: msg.t, mid: msg.mid }); } catch (_) {} });
+    });
+  });
+  Object.keys(gq).forEach(function (gname) {
+    if (groups[gname] && markMidsDelivered(groups[gname], gq[gname])) { saveGroups(); if (activeChat === gname) openChat(gname); }
+  });
+}
+
 function sendMsg() {
   var text = $('msg').value.trim();
   if (!text || !activeChat) return;
+  if (restricted) return alert('Waiting for admin approval — you cannot send messages yet.');
   var mid = newMid();
   if (isGroup(activeChat)) {
     var g = groups[activeChat];
@@ -1438,13 +1492,23 @@ function sendMsg() {
       var mc = connFor(m) || ensureConn(m);
       if (mc && mc.open) { mc.send({ g: activeChat, gm: g.members, t: text, mid: mid }); sent++; }
     });
-    if (!sent) { alert('No group members are online right now'); return; }
+    if (!sent) {
+      queueMsg(activeChat, text, mid);
+      addGroupEntry(activeChat, { k: 't', w: 'me', who: myName, s: text, mid: mid, pending: true, time: now() });
+      $('msg').value = '';
+      return;
+    }
     addGroupEntry(activeChat, { k: 't', w: 'me', who: myName, s: text, mid: mid, time: now() });
     $('msg').value = '';
     return;
   }
   var c = connFor(activeChat);
-  if (!c || !c.open) { alert('Not connected yet — wait a moment or check if they are online'); return; }
+  if (!c || !c.open) {
+    queueMsg(activeChat, text, mid);
+    addEntry(activeChat, { k: 't', w: 'me', s: text, mid: mid, pending: true, time: now() });
+    $('msg').value = '';
+    return;
+  }
   c.send({ t: text, mid: mid });
   addEntry(activeChat, { k: 't', w: 'me', s: text, mid: mid, time: now() });
   $('msg').value = '';
@@ -1517,7 +1581,7 @@ $('kbBtn').onclick = function () {
   $('kb').style.display = on ? 'block' : 'none';
   $('msg').readOnly = on;
   $('kbBtn').classList.toggle('on', on);
-  if (on) { renderKb(); $('msg').blur(); }
+  if (on) { renderKb(); $('msg').blur(); setTimeout(scrollLog, 60); }
 };
 
 /* ---------- voice messages ---------- */
@@ -1619,6 +1683,7 @@ function maybeCompress(file) {
 }
 function sendFileActual(file) {
   if (!activeChat) return;
+  if (restricted) return alert('Waiting for admin approval — you cannot send yet.');
   var isG = isGroup(activeChat);
   var targets = [];
   if (isG) {
@@ -2167,6 +2232,16 @@ function start(silent) {
       else addEntry(activeChat, { k: 'sys', s: 'Admin: ' + msg.text });
     }
   });
+  peer.on('restricted', function (v) { setRestricted(v); });
+  peer.on('approved', function () {
+    setRestricted(false, true);
+    alert('The admin approved you — chat unlocked!');
+  });
+  peer.on('removed', function () {
+    alert('The admin removed you. You can come back, but chat stays locked until approved.');
+    if (peer) peer.destroy();
+    setTimeout(function () { location.reload(); }, 600);
+  });
   peer.on('kicked', function () {
     alert('You were disconnected by the admin.');
     if (peer) peer.destroy();
@@ -2263,7 +2338,12 @@ $('myId').addEventListener('keydown', function (e) { if (e.key === 'Enter') star
 var renameTarget = null;
 var bannedList = [];
 var mutedNames = [];
-var PASSKEY = 'saturn87';
+var restricted = false;
+function setRestricted(v, silent) {
+  restricted = v;
+  $('restrictBar').style.display = v ? 'block' : 'none';
+  if (v && !silent) alert('You were removed by the admin.\nYou can browse and read, but cannot send messages until the admin approves you.');
+}
 function openRename(name) {
   renameTarget = name;
   $('renameInput').value = disp(name);
@@ -2297,6 +2377,7 @@ function timeAgo(ts) {
 }
 var lastStats = null;
 function renderAdminModal() {
+  var removedList = (lastStats && lastStats.removed) || [];
   var onl = $('adminOnline');
   onl.innerHTML = '';
   var others = lastPeers.filter(function (u) { return u !== myName; });
@@ -2311,8 +2392,9 @@ function renderAdminModal() {
     var row = document.createElement('div');
     row.className = 'member-row';
     row.style.flexWrap = 'wrap';
+    var isRemoved = removedList.indexOf(u) !== -1;
     var sp = document.createElement('span');
-    sp.textContent = disp(u) + (muted ? ' (muted)' : '');
+    sp.textContent = disp(u) + (muted ? ' (muted)' : '') + (isRemoved ? ' (waiting)' : '');
     sp.style.flex = '1';
     row.appendChild(sp);
     var mk = function (label, danger, fn) {
@@ -2327,9 +2409,10 @@ function renderAdminModal() {
       if (!confirm('Ban "' + disp(u) + '" from the webapp?')) return;
       peer._send({ type: 'ban', to: u });
     });
-    mk('Kick', false, function () {
-      if (!confirm('Disconnect "' + disp(u) + '"? (no ban, they can rejoin)')) return;
-      peer._send({ type: 'kick', to: u });
+    mk(isRemoved ? 'Approve' : 'Remove', false, function () {
+      if (isRemoved) { peer._send({ type: 'approve', to: u }); return; }
+      if (!confirm('Remove "' + disp(u) + '"? They can come back, but chat stays blocked until you Approve.')) return;
+      peer._send({ type: 'remove', to: u });
     });
     mk(muted ? 'Unmute' : 'Mute', false, function () {
       peer._send({ type: muted ? 'unmute' : 'mute', to: u });
@@ -2339,6 +2422,29 @@ function renderAdminModal() {
       if (v && v.trim() && v !== u) peer._send({ type: 'set-name', to: u, value: v.trim() });
     });
     onl.appendChild(row);
+  });
+  var rmv = $('adminRemoved');
+  rmv.innerHTML = '';
+  if (!removedList.length) {
+    var d3 = document.createElement('div');
+    d3.style.cssText = 'font-size:0.7rem; color:var(--dim);';
+    d3.textContent = 'none';
+    rmv.appendChild(d3);
+  }
+  removedList.forEach(function (u) {
+    var row = document.createElement('div');
+    row.className = 'member-row';
+    var sp = document.createElement('span');
+    sp.textContent = u + (lastPeers.indexOf(u) !== -1 ? ' (online)' : ' (offline)');
+    sp.style.flex = '1';
+    var btn = document.createElement('button');
+    btn.className = 'rm-btn';
+    btn.style.cssText = 'border-color:rgba(255,255,255,0.3); background:rgba(255,255,255,0.14); color:var(--text);';
+    btn.textContent = 'Approve';
+    btn.onclick = function () { peer._send({ type: 'approve', to: u }); };
+    row.appendChild(sp);
+    row.appendChild(btn);
+    rmv.appendChild(row);
   });
   var sn = $('adminSeen');
   sn.innerHTML = '';
