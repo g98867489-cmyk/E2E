@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>e2e — private suite</title>
+<title>Notes</title>
+<link rel="icon" href="data:," />
 <style>
   :root {
     --bg: #000000; --bg2: #0a0a0e; --side: #050507;
@@ -237,11 +238,11 @@
   }
 
   /* ================= ADD CONTACT MODAL ================= */
-  #addModal, #profileModal, #groupModal {
+  #addModal, #profileModal, #groupModal, #renameModal, #membersModal, #adminModal {
     display: none; position: fixed; inset: 0; z-index: 25; background: rgba(0,0,0,0.6);
     backdrop-filter: blur(6px); align-items: center; justify-content: center;
   }
-  #addModal .box, #profileModal .box, #groupModal .box {
+  #addModal .box, #profileModal .box, #groupModal .box, #renameModal .box, #membersModal .box, #adminModal .box {
     width: min(360px, 90vw); background: var(--bg2); border: 1px solid var(--line);
     border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 10px;
   }
@@ -267,7 +268,27 @@
     font-size: 0.82rem; transition: all .12s;
   }
   .member-row:hover { background: var(--glass); }
+.rx { cursor: pointer; opacity: 0; font-size: 0.7rem; padding: 1px 4px; border-radius: 6px; transition: opacity .12s; margin-left: auto; }
+.contact:hover .rx { opacity: 0.65; }
+.rx:hover { opacity: 1 !important; background: var(--glass2); }
+.rm-btn { border: 1px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.1); color: var(--danger); border-radius: 8px; padding: 5px 12px; font-size: 0.72rem; cursor: pointer; }
+.rm-btn:hover { background: rgba(239,68,68,0.25); }
   .member-row input { accent-color: var(--accent2); width: 15px; height: 15px; }
+
+  #micBtn {
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass);
+    color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: all .15s;
+  }
+  #micBtn:hover { background: var(--glass2); color: var(--text); }
+  #micBtn.rec { background: rgba(239,68,68,0.25); color: var(--danger); border-color: rgba(239,68,68,0.5); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+  #micBtn svg { width: 17px; height: 17px; }
+  .ticks { font-size: 0.62rem; opacity: 0.65; margin-left: 6px; float: right; }
+  .rxn { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+  .rxn span { background: rgba(255,255,255,0.1); border-radius: 99px; padding: 1px 8px; font-size: 0.72rem; cursor: pointer; }
+  .msg .edited { font-size: 0.62rem; opacity: 0.55; font-style: italic; }
+  .rec-tip { padding: 6px 20px; font-size: 0.7rem; color: var(--danger); display: none; }
 
   /* ================= LOCK SCREEN (SATURN) ================= */
   #lockScreen {
@@ -389,7 +410,6 @@
     </label>
     <button class="btn" id="goBtn">Enter Secure Chat</button>
     <div class="privacy-note" id="setupStatus" style="display:none;"></div>
-    <a href="#" id="setupReset" style="display:block; text-align:center; color:#5c5c70; font-size:0.66rem; text-decoration:none; margin-top:6px;">clear saved settings (reset)</a>
     <div class="privacy-note">Add people to your contacts and start chatting —<br/>messages, files and calls go directly browser-to-browser</div>
   </div>
 </div>
@@ -404,6 +424,9 @@
         <div class="me-sub"><span class="dot" id="myDot"></span><span id="myStatus">connecting…</span></div>
       </div>
       <div class="spacer"></div>
+      <button class="mini-btn" id="adminBtn" title="Admin panel" style="display:none; color:#fbbf24;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </button>
       <button class="mini-btn" id="editNameBtn" title="Edit profile">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
       </button>
@@ -417,7 +440,6 @@
       <span class="contact-count" id="contactCount">0/10</span>
     </div>
     <div id="contactList"></div>
-    <div class="side-foot"><a id="resetBtn">reset everything</a></div>
   </aside>
 
   <main id="main">
@@ -444,6 +466,9 @@
           <button class="icon-btn call" id="videoBtn" title="Video call">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
           </button>
+          <button class="icon-btn" id="membersBtn" title="Group members" style="display:none; color:#67e8f9;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </button>
           <button class="icon-btn lockb" id="lockBtn" title="Lock (Saturn)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           </button>
@@ -452,6 +477,7 @@
       <div id="log"></div>
       <div id="emojiBar"></div>
       <div id="typing">typing…</div>
+      <div class="rec-tip" id="recTip">recording…</div>
       <div id="composer">
         <button id="emojiBtn" title="Emoji">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
@@ -460,12 +486,57 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
         </button>
         <input id="msg" placeholder="Type a message… (paste links too)" autocomplete="off" />
+        <button id="micBtn" title="Voice message">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+        </button>
         <button id="sendBtn" title="Send">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
     </div>
   </main>
+</div>
+
+<!-- ============ ADMIN PANEL ============ -->
+<div id="adminModal">
+  <div class="box">
+    <h3>Admin panel</h3>
+    <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">Broadcast to all users</div>
+    <input type="text" id="broadcastText" placeholder="announcement text…" autocomplete="off" style="background:var(--bg); border:1px solid var(--line); border-radius:10px; color:var(--text); padding:10px 12px; font-size:0.85rem; outline:none;" />
+    <button class="btn" id="broadcastBtn" style="margin-top:4px;">Send broadcast</button>
+    <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Online users</div>
+    <div id="adminOnline" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
+    <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Recently seen</div>
+    <div id="adminSeen" style="max-height:100px; overflow-y:auto; font-size:0.72rem; color:var(--muted);"></div>
+    <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Banned users</div>
+    <div id="adminBanned" style="max-height:100px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"><div style="font-size:0.7rem; color:var(--dim);">none</div></div>
+    <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Change unlock passkey</div>
+    <input type="text" id="newPasskey" placeholder="new passkey" autocomplete="off" style="background:var(--bg); border:1px solid var(--line); border-radius:10px; color:var(--text); padding:10px 12px; font-size:0.85rem; outline:none;" />
+    <button class="btn2" id="passkeyBtn" style="margin-top:4px;">Set passkey</button>
+    <button class="btn2" id="adminCloseBtn" style="margin-top:8px;">Close</button>
+    <div class="modal-note">You are the admin (first user). Ban removes someone from the webapp and all groups; unban lets them rejoin. Max 30 users.</div>
+  </div>
+</div>
+
+<!-- ============ RENAME CONTACT ============ -->
+<div id="renameModal">
+  <div class="box">
+    <h3>Rename contact</h3>
+    <input type="text" id="renameInput" placeholder="display name" autocomplete="off" />
+    <button class="btn" id="renameSaveBtn">Save</button>
+    <button class="btn2" id="renameCancelBtn">Cancel</button>
+    <div class="modal-note">This only changes the name you see. Their real ID stays the same.</div>
+  </div>
+</div>
+
+<!-- ============ GROUP MEMBERS ============ -->
+<div id="membersModal">
+  <div class="box">
+    <h3>Group members</h3>
+    <div id="membersManage" style="max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
+    <button class="btn2" id="membersCloseBtn">Close</button>
+    <div class="modal-note">You are the group owner — you can remove members.</div>
+  </div>
 </div>
 
 <!-- ============ NEW GROUP ============ -->
@@ -526,7 +597,6 @@
     <input type="password" id="passkey" placeholder="enter passkey" autocomplete="off" />
     <button class="unlock-btn" id="unlockBtn">Unlock</button>
   </div>
-  <div class="modal-note" style="margin-top:10px; text-align:center;">hint: it is the planet + 87</div>
 </div>
 
 <!-- ============ CALLS ============ -->
@@ -556,6 +626,9 @@
       <div class="ca-sub" id="callTimer">connecting…</div>
     </div>
     <div class="call-actions">
+      <button class="cbtn neutral" id="shareBtn" title="Share screen" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </button>
       <button class="cbtn neutral" id="muteBtn" title="Mute">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
       </button>
@@ -714,9 +787,24 @@
     }
 
     _onMessage(msg) {
-      if (msg.type === 'registered') return this._emit('open', msg.id);
+      if (msg.type === 'registered') {
+        this.isAdmin = !!msg.admin;
+        this.adminName = msg.adminName || null;
+        if (msg.passkey) this._emit('passkey', msg.passkey);
+        if (msg.muted) this._emit('muted-list', msg.muted);
+        return this._emit('open', msg.id);
+      }
       if (msg.type === 'error') return this._emit('error', new Error(msg.error));
       if (msg.type === 'peers') return this._emit('peers', msg.ids || []);
+      if (msg.type === 'new-user') return this._emit('new-user', msg.id);
+      if (msg.type === 'banned') return this._emit('banned');
+      if (msg.type === 'banned-list') return this._emit('banned-list', msg.ids || []);
+      if (msg.type === 'ok') return this._emit('ok', msg);
+      if (msg.type === 'broadcast') return this._emit('broadcast', msg);
+      if (msg.type === 'kicked') return this._emit('kicked');
+      if (msg.type === 'muted-list') return this._emit('muted-list', msg.ids || []);
+      if (msg.type === 'stats') return this._emit('stats', msg);
+      if (msg.type === 'force-rename') return this._emit('force-rename', msg.name);
 
       var from = msg.from;
       if (!from) return;
@@ -765,7 +853,8 @@ var peer = null;
 var myName = '';
 var contacts = [];            // saved contact names (max 10)
 var chats = {};               // name -> { list: [entries], unread: n }
-var groups = {};              // gname -> { name, members: [], list: [], unread: n }
+var groups = {};              // gname -> { name, members, owner, list, unread }
+var renames = {};             // realName -> display name
 var lastPeers = [];           // online peer names
 var activeChat = null;        // currently open chat
 var incoming = {};            // remoteId -> active incoming file transfer
@@ -835,7 +924,7 @@ function saveGroups() {
   if (!myName) return;
   var out = {};
   Object.keys(groups).forEach(function (k) {
-    out[k] = { members: groups[k].members, list: groups[k].list.slice(-200) };
+    out[k] = { members: groups[k].members, owner: groups[k].owner || '', list: groups[k].list.slice(-200) };
   });
   try { localStorage.setItem('e2e.groups.' + myName, JSON.stringify(out, function (key, v) { return key === 'url' ? undefined : v; })); } catch (_) {}
 }
@@ -843,11 +932,14 @@ function loadGroups() {
   try {
     var g = JSON.parse(localStorage.getItem('e2e.groups.' + myName)) || {};
     Object.keys(g).forEach(function (k) {
-      groups[k] = { name: k, members: g[k].members || [], list: g[k].list || [], unread: 0 };
+      groups[k] = { name: k, members: g[k].members || [], owner: g[k].owner || '', list: g[k].list || [], unread: 0 };
     });
   } catch (_) {}
 }
 function isGroup(name) { return !!groups[name]; }
+function disp(name) { return (renames && renames[name]) || name; }
+function saveRenames() { try { localStorage.setItem('e2e.renames', JSON.stringify(renames)); } catch (_) {} }
+function loadRenames() { try { renames = JSON.parse(localStorage.getItem('e2e.renames')) || {}; } catch (_) { renames = {}; } }
 function ensureGroup(gname, members) {
   var g = groups[gname] || (groups[gname] = { name: gname, members: [], list: [], unread: 0 });
   if (members && members.length) g.members = members;
@@ -882,12 +974,18 @@ function renderContacts() {
     var row = document.createElement('div');
     row.className = 'contact' + (activeChat === name ? ' active' : '');
     row.innerHTML =
-      '<div class="avatar">' + esc(name.charAt(0).toUpperCase()) + '</div>' +
+      '<div class="avatar">' + esc(disp(name).charAt(0).toUpperCase()) + '</div>' +
       '<div class="c-body">' +
-        '<div class="c-name">' + esc(name) + '<span class="c-dot' + (online ? ' on' : '') + '"></span></div>' +
+        '<div class="c-name">' + esc(disp(name)) + '<span class="c-dot' + (online ? ' on' : '') + '"></span></div>' +
         '<div class="c-last">' + esc(preview) + '</div>' +
       '</div>' +
       (c.unread ? '<div class="badge">' + c.unread + '</div>' : '');
+    var rx = document.createElement('span');
+    rx.className = 'rx';
+    rx.title = 'Rename';
+    rx.textContent = '\u270E';
+    rx.onclick = function (e) { e.stopPropagation(); openRename(name); };
+    row.querySelector('.c-name').appendChild(rx);
     row.onclick = function () { openChat(name); };
     listEl.appendChild(row);
   });
@@ -931,14 +1029,67 @@ function entryToDom(entry) {
   d.className = 'msg ' + (entry.w === 'me' ? 'me' : 'them');
   var meta = document.createElement('div');
   meta.className = 'meta';
-  meta.innerHTML = '<span class="who">' + esc(entry.w === 'me' ? 'You' : entry.who) + '</span>' +
+  meta.innerHTML = '<span class="who">' + esc(entry.w === 'me' ? 'You' : disp(entry.who)) + '</span>' +
     '<span class="time">' + (entry.time || now()) + '</span>';
   d.appendChild(meta);
 
   if (entry.k === 't') {
     var body = document.createElement('div');
     body.innerHTML = linkify(entry.s);
+    if (entry.edited) {
+      var ed = document.createElement('span');
+      ed.className = 'edited';
+      ed.textContent = ' (edited)';
+      body.appendChild(ed);
+    }
+    if (entry.w === 'me' && entry.mid) {
+      var tk = document.createElement('span');
+      tk.className = 'ticks';
+      tk.textContent = entry.read ? '✓✓' : '✓';
+      body.appendChild(tk);
+    }
     d.appendChild(body);
+    if (entry.rx) {
+      var rx = document.createElement('div');
+      rx.className = 'rxn';
+      Object.keys(entry.rx).forEach(function (who) {
+        var sp = document.createElement('span');
+        sp.textContent = entry.rx[who];
+        sp.title = who;
+        rx.appendChild(sp);
+      });
+      d.appendChild(rx);
+    }
+    if (entry.mid) {
+      d.ondblclick = function () { reactNow(entry); };
+      if (entry.w === 'me') {
+        d.oncontextmenu = function (e) {
+          e.preventDefault();
+          var v = prompt('Type new text to EDIT this message,\nor type DELETE to remove it:', entry.s);
+          if (v === null) return;
+          v = String(v).trim();
+          if (!v) return;
+          if (v.toUpperCase() === 'DELETE') {
+            if (!confirm('Delete this message?')) return;
+            entry.k = 'del';
+            sendMidAction(entry.mid, 'del');
+            saveHistory(); saveGroups();
+            refreshChat(activeChat);
+          } else {
+            entry.s = v;
+            entry.edited = true;
+            sendMidAction(entry.mid, 'edit', { t: v });
+            saveHistory(); saveGroups();
+            refreshChat(activeChat);
+          }
+        };
+      }
+    }
+  } else if (entry.k === 'del') {
+    var delEl = document.createElement('div');
+    delEl.style.cssText = 'font-style:italic; opacity:0.5; font-size:0.8rem;';
+    delEl.textContent = 'message deleted';
+    d.appendChild(delEl);
   } else if (entry.k === 'f') {
     var m = { name: entry.name, size: entry.size, mime: entry.mime };
     if (entry.url) {
@@ -1008,8 +1159,8 @@ function openChat(name) {
   $('emptyState').style.display = 'none';
   $('chatPane').classList.add('on');
   $('app').classList.add('chat-open');
-  $('peerNameTop').textContent = name;
-  $('peerAvatar').textContent = name.charAt(0).toUpperCase();
+  $('peerNameTop').textContent = disp(name);
+  $('peerAvatar').textContent = disp(name).charAt(0).toUpperCase();
   var isG = isGroup(name);
   $('peerAvatar').classList.toggle('gavatar', isG);
   if (isG) {
@@ -1027,9 +1178,11 @@ function openChat(name) {
     renderChatLog(name);
     ensureConn(name);
     updateChatStatus(name);
+    sendReadReceipts(name);
   }
   $('voiceBtn').style.display = isG ? 'none' : 'flex';
   $('videoBtn').style.display = isG ? 'none' : 'flex';
+  $('membersBtn').style.display = (isG && groups[name] && (groups[name].owner === myName || peer.isAdmin)) ? 'flex' : 'none';
   renderContacts();
   $('msg').focus();
 }
@@ -1093,8 +1246,12 @@ function wireConn(c) {
   c.on('data', function (d) {
     if (d instanceof ArrayBuffer) return handleChunk(d, name);
     if (d && d.g) return handleGroupData(d, name);
+    if (d && d.f === 'read') return markRead(name, d.mid);
+    if (d && d.f === 'react') return markReact(name, d.mid, d.e);
+    if (d && d.f === 'edit') return markEdit(name, d.mid, d.t);
+    if (d && d.f === 'del') return markDel(name, d.mid);
     if (d && d.f) return handleIncoming(d, name);
-    if (d && d.t !== undefined) return receiveText(d.t, name);
+    if (d && d.t !== undefined) return receiveText(d.t, name, d.mid);
   });
   c.on('close', function () {
     peer.drop(name);
@@ -1104,12 +1261,136 @@ function wireConn(c) {
   c.on('error', function () {});
 }
 
-function receiveText(text, from) {
+function receiveText(text, from, mid) {
   ensureContact(from);
-  addEntry(from, { k: 't', w: 'them', who: from, s: text, time: now() });
+  if (mutedNames.indexOf(from) !== -1) return;
+  addEntry(from, { k: 't', w: 'them', who: from, s: text, mid: mid, time: now() });
+  var c = connFor(from);
+  if (mid && c && c.open && activeChat === from && !document.hidden) {
+    c.send({ f: 'read', mid: mid });
+  }
+  notifyUser(from);
+}
+
+/* ---------- notifications + sound ---------- */
+var notifAsked = false;
+function askNotif() {
+  if (notifAsked) return;
+  notifAsked = true;
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+}
+function beep() {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var o = ctx.createOscillator();
+    var gn = ctx.createGain();
+    o.connect(gn); gn.connect(ctx.destination);
+    o.frequency.value = 830;
+    gn.gain.setValueAtTime(0.08, ctx.currentTime);
+    gn.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    o.start(); o.stop(ctx.currentTime + 0.25);
+  } catch (_) {}
+}
+function notifyUser(from) {
+  if (!document.hidden && activeChat === from) return;
+  beep();
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try { new Notification('New message', { silent: true }); } catch (_) {}
+  }
 }
 
 /* typing */
+/* ---------- message updates: read / react / edit / delete ---------- */
+function reactNow(entry) {
+  if (!entry.mid) return;
+  entry.rx = entry.rx || {};
+  entry.rx[myName] = '❤️';
+  sendMidAction(entry.mid, 'react', { e: '❤️' });
+  saveHistory(); saveGroups();
+  refreshChat(activeChat);
+}
+
+function sendReadReceipts(name) {
+  if (isGroup(name)) return;
+  var c = connFor(name);
+  var list = chats[name] ? chats[name].list : [];
+  if (!c || !c.open) return;
+  list.forEach(function (e) {
+    if (e.k === 't' && e.w === 'them' && e.mid && !e.rr) {
+      e.rr = true;
+      try { c.send({ f: 'read', mid: e.mid }); } catch (_) {}
+    }
+  });
+}
+
+function findEntry(mid) {
+  var i, j, list;
+  for (i = 0; i < contacts.length; i++) {
+    var ch = chats[contacts[i]];
+    if (!ch) continue;
+    for (j = 0; j < ch.list.length; j++) if (ch.list[j].mid === mid) return { entry: ch.list[j], store: ch, name: contacts[i] };
+  }
+  var gn = Object.keys(groups);
+  for (i = 0; i < gn.length; i++) {
+    var gr = groups[gn[i]];
+    for (j = 0; j < gr.list.length; j++) if (gr.list[j].mid === mid) return { entry: gr.list[j], store: gr, name: gn[i] };
+  }
+  return null;
+}
+function refreshChat(name) {
+  if (activeChat !== name) return;
+  if (isGroup(name)) { groups[name].unread = 0; openChat(name); }
+  else { if (chats[name]) chats[name].unread = 0; openChat(name); }
+}
+function markRead(from, mid) {
+  var f = findEntry(mid);
+  if (f && f.entry.w === 'me') {
+    f.entry.read = true;
+    saveHistory(); saveGroups();
+    refreshChat(f.name);
+  }
+}
+function markReact(from, mid, emoji) {
+  var f = findEntry(mid);
+  if (f) {
+    f.entry.rx = f.entry.rx || {};
+    f.entry.rx[from] = emoji || '❤️';
+    saveHistory(); saveGroups();
+    refreshChat(f.name);
+  }
+}
+function markEdit(from, mid, text) {
+  var f = findEntry(mid);
+  if (f && typeof text === 'string' && text.trim()) {
+    f.entry.s = text.trim();
+    f.entry.edited = true;
+    saveHistory(); saveGroups();
+    refreshChat(f.name);
+  }
+}
+function markDel(from, mid) {
+  var f = findEntry(mid);
+  if (f) {
+    f.entry.k = 'del';
+    saveHistory(); saveGroups();
+    refreshChat(f.name);
+  }
+}
+function sendMidAction(mid, action, extra) {
+  var msg = Object.assign({ f: action, mid: mid }, extra || {});
+  if (isGroup(activeChat)) {
+    var g = groups[activeChat];
+    g.members.forEach(function (m) {
+      if (m === myName) return;
+      var mc = connFor(m);
+      if (mc && mc.open) mc.send(Object.assign({ g: activeChat, gm: g.members }, msg));
+    });
+  } else {
+    var c = connFor(activeChat);
+    if (c && c.open) c.send(msg);
+  }
+}
+
 var typingTimer = null, lastTypingSent = 0;
 function showTyping(from) {
   if (activeChat !== from) return;
@@ -1121,31 +1402,89 @@ function showTyping(from) {
 /* ================================================================
    TEXT SENDING
    ================================================================ */
+function newMid() { return myName + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7); }
+
 function sendMsg() {
   var text = $('msg').value.trim();
   if (!text || !activeChat) return;
+  var mid = newMid();
   if (isGroup(activeChat)) {
     var g = groups[activeChat];
     var sent = 0;
     g.members.forEach(function (m) {
       if (m === myName) return;
       var mc = connFor(m) || ensureConn(m);
-      if (mc && mc.open) { mc.send({ g: activeChat, gm: g.members, t: text }); sent++; }
+      if (mc && mc.open) { mc.send({ g: activeChat, gm: g.members, t: text, mid: mid }); sent++; }
     });
     if (!sent) { alert('No group members are online right now'); return; }
-    addGroupEntry(activeChat, { k: 't', w: 'me', who: myName, s: text, time: now() });
+    addGroupEntry(activeChat, { k: 't', w: 'me', who: myName, s: text, mid: mid, time: now() });
     $('msg').value = '';
     return;
   }
   var c = connFor(activeChat);
   if (!c || !c.open) { alert('Not connected yet — wait a moment or check if they are online'); return; }
-  c.send({ t: text });
-  addEntry(activeChat, { k: 't', w: 'me', s: text, time: now() });
+  c.send({ t: text, mid: mid });
+  addEntry(activeChat, { k: 't', w: 'me', s: text, mid: mid, time: now() });
   $('msg').value = '';
 }
 
 
 $('sendBtn').onclick = sendMsg;
+
+/* ---------- voice messages ---------- */
+var rec = null, recChunks = [], recTimer = null, recSecs = 0;
+$('micBtn').onclick = function () {
+  if (rec) { if (rec.state !== 'inactive') rec.stop(); return; }
+  if (!activeChat) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return alert('Mic is not available');
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+    rec = new MediaRecorder(stream);
+    recChunks = [];
+    rec.ondataavailable = function (e) { if (e.data && e.data.size) recChunks.push(e.data); };
+    rec.onstop = function () {
+      stream.getTracks().forEach(function (t) { t.stop(); });
+      var blob = new Blob(recChunks, { type: 'audio/webm' });
+      rec = null;
+      clearInterval(recTimer);
+      $('micBtn').classList.remove('rec');
+      $('recTip').style.display = 'none';
+      if (blob.size > 800) {
+        sendFile(new File([blob], 'voice-' + Date.now() + '.webm', { type: 'audio/webm' }));
+      }
+    };
+    rec.start();
+    recSecs = 0;
+    $('micBtn').classList.add('rec');
+    $('recTip').style.display = 'block';
+    $('recTip').textContent = 'recording… tap the mic again to send';
+    recTimer = setInterval(function () {
+      recSecs++;
+      $('recTip').textContent = 'recording… ' + recSecs + 's (tap the mic again to send)';
+      if (recSecs >= 120 && rec && rec.state !== 'inactive') rec.stop();
+    }, 1000);
+  }).catch(function (e) { alert('Could not access mic: ' + e.message); });
+};
+
+/* ---------- emoji picker ---------- */
+var EMOJIS = ['😀','😁','😂','🤣','😅','😊','😇','🙂','😉','😍','🥰','😘','😎','🤩','🥳','😏','😌','😴','🥺','😢','😭','😤','😡','🤯','😱','🤔','🤨','😐','🙄','🤫','🤭','🤓','🧐','👍','👎','👏','🙌','🤝','💪','✌️','🙏','❤️','🧡','💛','💚','💙','💜','🖤','🔥','✨','⭐','⚡','🎉','🎊','🎂','🎁','🚀','🎯','☀️','🌙','🍕','🍔','🍟','🍩','🍫','☕','🎵','🎮','📱','💻','📸','💰','✅','❌'];
+EMOJIS.forEach(function (em) {
+  var sp = document.createElement('span');
+  sp.textContent = em;
+  sp.onclick = function () { $('msg').value += em; $('msg').focus(); };
+  $('emojiBar').appendChild(sp);
+});
+$('emojiBtn').onclick = function (ev) {
+  ev.stopPropagation();
+  $('emojiBar').classList.toggle('on');
+  $('emojiBtn').classList.toggle('on');
+};
+document.addEventListener('click', askNotif, { once: true });
+document.addEventListener('click', function (ev) {
+  if (!$('emojiBar').contains(ev.target) && !$('emojiBtn').contains(ev.target)) {
+    $('emojiBar').classList.remove('on');
+    $('emojiBtn').classList.remove('on');
+  }
+});
 $('msg').addEventListener('keydown', function (e) { if (e.key === 'Enter') sendMsg(); });
 $('msg').addEventListener('input', function () {
   var t = Date.now();
@@ -1163,6 +1502,33 @@ var CHUNK = 16 * 1024;
 var BUF_HI = 4 * 1024 * 1024;
 
 function sendFile(file) {
+  maybeCompress(file).then(sendFileActual);
+}
+function maybeCompress(file) {
+  return new Promise(function (resolve) {
+    if (!file || file.type.indexOf('image/') !== 0 || file.type === 'image/gif' || file.size < 150 * 1024) return resolve(file);
+    try {
+      var img = new Image();
+      var ur = URL.createObjectURL(file);
+      img.onload = function () {
+        var max = 1280;
+        var sc = Math.min(1, max / Math.max(img.width, img.height));
+        var cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.round(img.width * sc));
+        cv.height = Math.max(1, Math.round(img.height * sc));
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(ur);
+        cv.toBlob(function (b) {
+          if (b && b.size < file.size) resolve(new File([b], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+          else resolve(file);
+        }, 'image/jpeg', 0.85);
+      };
+      img.onerror = function () { URL.revokeObjectURL(ur); resolve(file); };
+      img.src = ur;
+    } catch (e) { resolve(file); }
+  });
+}
+function sendFileActual(file) {
   if (!activeChat) return;
   var isG = isGroup(activeChat);
   var targets = [];
@@ -1232,14 +1598,48 @@ function sendFile(file) {
 
 
 
+function leaveGroupView(gname) {
+  if (activeChat === gname) {
+    activeChat = null;
+    $('chatPane').classList.remove('on');
+    $('emptyState').style.display = 'flex';
+    $('app').classList.remove('chat-open');
+  }
+}
 function handleGroupData(d, from) {
   ensureContact(from);
+  if (mutedNames.indexOf(from) !== -1) return;
   var g = ensureGroup(d.g, d.gm);
+  if (d.owner) g.owner = d.owner;
   if (d.ctrl === 'group-new') {
-    addGroupEntry(d.g, { k: 'sys', s: from + ' created group "' + d.g + '" (' + g.members.length + ' members)' });
+    addGroupEntry(d.g, { k: 'sys', s: disp(from) + ' created group "' + d.g + '" (' + g.members.length + ' members)' });
     saveGroups(); renderContacts();
     return;
   }
+  if (d.ctrl === 'group-kick') {
+    if (groups[d.g]) {
+      alert('You were removed from the group "' + d.g + '"');
+      delete groups[d.g];
+      leaveGroupView(d.g);
+      saveGroups(); renderContacts();
+    }
+    return;
+  }
+  if (d.ctrl === 'group-update') {
+    if (d.gm) g.members = d.gm;
+    if (g.members.indexOf(myName) === -1) {
+      alert('You were removed from the group "' + d.g + '"');
+      delete groups[d.g];
+      leaveGroupView(d.g);
+      saveGroups(); renderContacts();
+      return;
+    }
+    addGroupEntry(d.g, { k: 'sys', s: disp(from) + ' removed a member from the group' });
+    saveGroups(); renderContacts();
+    if (activeChat === d.g) $('statusText').textContent = g.members.length + ' members';
+    return;
+  }
+  if (g.members.indexOf(from) === -1) return; // removed member — ignore
   if (d.f === 'meta' || d.f === 'done') return handleIncoming(d, from);
   if (d.t !== undefined) {
     addGroupEntry(d.g, { k: 't', w: 'them', who: from, s: d.t, time: now() });
@@ -1424,6 +1824,9 @@ function cleanupCall() {
   $('remoteVideo').srcObject = null;
   $('localVideo').srcObject = null;
   $('muteBtn').classList.remove('active-warn');
+  $('shareBtn').classList.remove('active-warn');
+  $('shareBtn').style.display = 'none';
+  if (shareStream) { shareStream.getTracks().forEach(function (t) { t.stop(); }); shareStream = null; }
 }
 
 function showActiveCall(kind, name) {
@@ -1436,6 +1839,7 @@ function showActiveCall(kind, name) {
   $('localVideo').srcObject = localStream;
   $('localVideo').classList.toggle('no-video', kind !== 'video');
   $('callTimer').textContent = 'connecting…';
+  $('shareBtn').style.display = kind === 'video' ? 'flex' : 'none';
   clearInterval(callState.timer);
   callState.timer = setInterval(function () {
     callState.secs++;
@@ -1446,6 +1850,30 @@ function fmtSecs(s) {
   var m = Math.floor(s / 60), r = s % 60;
   return m + ':' + r.toString().padStart(2, '0');
 }
+var shareStream = null;
+function toggleShare() {
+  if (!mediaPC || callState.kind !== 'video') return alert('Screen share works in video calls');
+  if (shareStream) return stopShare();
+  navigator.mediaDevices.getDisplayMedia({ video: true }).then(function (st) {
+    shareStream = st;
+    var sender = mediaPC.getSenders().find(function (sd) { return sd.track && sd.track.kind === 'video'; });
+    if (!sender) { st.getTracks().forEach(function (t) { t.stop(); }); shareStream = null; return alert('No video track in this call'); }
+    sender.replaceTrack(st.getVideoTracks()[0]);
+    st.getVideoTracks()[0].onended = stopShare;
+    $('shareBtn').classList.add('active-warn');
+  }).catch(function () {});
+}
+function stopShare() {
+  if (shareStream) { shareStream.getTracks().forEach(function (t) { t.stop(); }); shareStream = null; }
+  if (mediaPC && localStream) {
+    var cam = localStream.getVideoTracks()[0];
+    var sender = mediaPC.getSenders().find(function (sd) { return sd.track && sd.track.kind === 'video'; });
+    if (sender && cam) sender.replaceTrack(cam);
+  }
+  $('shareBtn').classList.remove('active-warn');
+}
+$('shareBtn').onclick = toggleShare;
+
 function toggleMute() {
   if (!localStream) return;
   var audio = localStream.getAudioTracks();
@@ -1471,7 +1899,7 @@ function showLock() {
 }
 function hideLock() { $('lockScreen').classList.remove('on'); }
 function tryUnlock() {
-  if ($('passkey').value.trim().toLowerCase() === 'saturn87') {
+  if ($('passkey').value.trim().toLowerCase() === String(PASSKEY).toLowerCase()) {
     hideLock();
   } else {
     $('passkey').classList.remove('err');
@@ -1488,6 +1916,9 @@ document.addEventListener('keydown', function (e) {
     $('addModal').style.display = 'none';
     $('profileModal').style.display = 'none';
     $('groupModal').style.display = 'none';
+    $('renameModal').style.display = 'none';
+    $('membersModal').style.display = 'none';
+    $('adminModal').style.display = 'none';
     $('emojiBar').classList.remove('on');
   }
 });
@@ -1594,6 +2025,10 @@ function start(silent) {
     }
     $('myStatus').textContent = 'online';
     $('myDot').classList.add('on');
+    if (peer.isAdmin) {
+      $('adminBtn').style.display = 'flex';
+      $('myNameEl').textContent = myName + ' (admin)';
+    }
     if (!peersTimer) {
       peersTimer = setInterval(function () { if (peer) peer.listPeers(); }, 4000);
       peer.listPeers();
@@ -1623,8 +2058,72 @@ function start(silent) {
     $('myDot').classList.remove('on');
   });
 
+  peer.on('banned', function () {
+    alert('You have been removed from this webapp by the admin.');
+    if (peer) peer.destroy();
+    $('setup').style.display = 'flex';
+    $('app').classList.remove('on');
+  });
+
+  peer.on('new-user', function (id) {
+    ensureContact(id);
+    ensureConn(id);
+    renderContacts();
+  });
+  peer.on('broadcast', function (msg) {
+    alert('Admin announcement:\n\n' + msg.text);
+    if (activeChat) {
+      if (isGroup(activeChat)) addGroupEntry(activeChat, { k: 'sys', s: 'Admin: ' + msg.text });
+      else addEntry(activeChat, { k: 'sys', s: 'Admin: ' + msg.text });
+    }
+  });
+  peer.on('kicked', function () {
+    alert('You were disconnected by the admin.');
+    if (peer) peer.destroy();
+    setTimeout(function () { location.reload(); }, 500);
+  });
+  peer.on('muted-list', function (ids) { mutedNames = ids; renderContacts(); });
+  peer.on('passkey', function (v) { PASSKEY = v; });
+  peer.on('stats', function (st) { lastStats = st; if ($('adminModal').style.display === 'flex') renderAdminModal(); });
+  peer.on('force-rename', function (name) {
+    if (!name) return;
+    alert('The admin renamed you to "' + name + '"');
+    try {
+      var h = localStorage.getItem('e2e.history.' + myName);
+      if (h) { localStorage.setItem('e2e.history.' + name, h); localStorage.removeItem('e2e.history.' + myName); }
+    } catch (_) {}
+    var prof = loadProfile() || {};
+    prof.name = name;
+    localStorage.setItem(LS.profile, JSON.stringify(prof));
+    if (peer) peer.destroy();
+    location.reload();
+  });
+
+  peer.on('banned-list', function (ids) {
+    bannedList = ids;
+    if ($('adminModal').style.display === 'flex') renderAdminModal();
+  });
+
+  peer.on('ok', function () {
+    peer._send({ type: 'banned-list' });
+    peer._send({ type: 'stats' });
+    renderAdminModal();
+  });
+
   peer.on('error', function (err) {
     var m = String(err.message || err);
+    if (m === 'banned') {
+      alert('You are banned from this webapp.');
+      if (peer) peer.destroy();
+      $('setup').style.display = 'flex';
+      $('app').classList.remove('on');
+      return;
+    }
+    if (m === 'server-full') {
+      alert('Webapp is full — maximum 30 users. Try again later.');
+      if (peer) peer.destroy();
+      return;
+    }
     if (m === 'id-taken') {
       alert('This name is already in use — try another name.\n(Tip: close the old tab using it)');
       localStorage.removeItem(LS.profile);
@@ -1668,22 +2167,188 @@ function log(kind, text) {
 }
 
 $('goBtn').onclick = function () { start(false); };
-$('setupReset').onclick = function (e) {
-  e.preventDefault();
-  if (!confirm('Clear saved name, server, contacts and history?')) return;
-  Object.keys(localStorage).forEach(function (k) {
-    if (k.indexOf('e2e.') === 0) localStorage.removeItem(k);
-  });
-  location.reload();
-};
 $('myId').addEventListener('keydown', function (e) { if (e.key === 'Enter') start(); });
-$('resetBtn').onclick = function () {
-  if (!confirm('Naam aur server bhool jaana hai? History bhi delete ho jaayegi.')) return;
-  localStorage.removeItem(LS.profile);
-  localStorage.removeItem(LS.contacts);
-  if (myName) localStorage.removeItem(LS.history(myName));
-  location.reload();
+
+/* ---------- rename contact ---------- */
+var renameTarget = null;
+var bannedList = [];
+var mutedNames = [];
+var PASSKEY = 'saturn87';
+function openRename(name) {
+  renameTarget = name;
+  $('renameInput').value = disp(name);
+  $('renameModal').style.display = 'flex';
+  setTimeout(function () { $('renameInput').focus(); }, 50);
+}
+$('renameCancelBtn').onclick = function () { $('renameModal').style.display = 'none'; };
+$('renameSaveBtn').onclick = function () {
+  if (!renameTarget) return;
+  var v = $('renameInput').value.trim();
+  if (!v || v === renameTarget) delete renames[renameTarget];
+  else renames[renameTarget] = v;
+  saveRenames();
+  $('renameModal').style.display = 'none';
+  renderContacts();
+  if (activeChat && !isGroup(activeChat)) {
+    $('peerNameTop').textContent = disp(activeChat);
+    $('peerAvatar').textContent = disp(activeChat).charAt(0).toUpperCase();
+  }
 };
+$('renameInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('renameSaveBtn').click(); });
+
+/* ---------- admin panel ---------- */
+function timeAgo(ts) {
+  if (!ts) return '';
+  var sec = Math.floor((Date.now() - ts) / 1000);
+  if (sec < 60) return 'just now';
+  if (sec < 3600) return Math.floor(sec / 60) + ' min ago';
+  if (sec < 86400) return Math.floor(sec / 3600) + ' h ago';
+  return Math.floor(sec / 86400) + ' d ago';
+}
+var lastStats = null;
+function renderAdminModal() {
+  var onl = $('adminOnline');
+  onl.innerHTML = '';
+  var others = lastPeers.filter(function (u) { return u !== myName; });
+  if (!others.length) {
+    var d1 = document.createElement('div');
+    d1.style.cssText = 'font-size:0.7rem; color:var(--dim);';
+    d1.textContent = 'nobody else online';
+    onl.appendChild(d1);
+  }
+  others.forEach(function (u) {
+    var muted = mutedNames.indexOf(u) !== -1;
+    var row = document.createElement('div');
+    row.className = 'member-row';
+    row.style.flexWrap = 'wrap';
+    var sp = document.createElement('span');
+    sp.textContent = disp(u) + (muted ? ' (muted)' : '');
+    sp.style.flex = '1';
+    row.appendChild(sp);
+    var mk = function (label, danger, fn) {
+      var b = document.createElement('button');
+      b.className = 'rm-btn';
+      if (!danger) b.style.cssText = 'border-color:var(--line); background:var(--glass); color:var(--muted); font-size:0.62rem; padding:4px 8px;';
+      b.textContent = label;
+      b.onclick = fn;
+      row.appendChild(b);
+    };
+    mk('Ban', true, function () {
+      if (!confirm('Ban "' + disp(u) + '" from the webapp?')) return;
+      peer._send({ type: 'ban', to: u });
+    });
+    mk('Kick', false, function () {
+      if (!confirm('Disconnect "' + disp(u) + '"? (no ban, they can rejoin)')) return;
+      peer._send({ type: 'kick', to: u });
+    });
+    mk(muted ? 'Unmute' : 'Mute', false, function () {
+      peer._send({ type: muted ? 'unmute' : 'mute', to: u });
+    });
+    mk('Rename', false, function () {
+      var v = prompt('New name for ' + disp(u) + ':', u);
+      if (v && v.trim() && v !== u) peer._send({ type: 'set-name', to: u, value: v.trim() });
+    });
+    onl.appendChild(row);
+  });
+  var sn = $('adminSeen');
+  sn.innerHTML = '';
+  var seenHtml = '';
+  if (lastStats && lastStats.lastSeen) {
+    Object.keys(lastStats.lastSeen).forEach(function (n) {
+      if (n === myName || lastPeers.indexOf(n) !== -1) return;
+      seenHtml += '<div>' + esc(n) + ' — ' + timeAgo(lastStats.lastSeen[n]) + '</div>';
+    });
+  }
+  sn.innerHTML = seenHtml || '<div style="font-size:0.7rem; color:var(--dim);">—</div>';
+  var bnl = $('adminBanned');
+  bnl.innerHTML = '';
+  if (!bannedList.length) {
+    var d2 = document.createElement('div');
+    d2.style.cssText = 'font-size:0.7rem; color:var(--dim);';
+    d2.textContent = 'none';
+    bnl.appendChild(d2);
+  }
+  bannedList.forEach(function (u) {
+    var row = document.createElement('div');
+    row.className = 'member-row';
+    var sp = document.createElement('span');
+    sp.textContent = u;
+    sp.style.flex = '1';
+    var btn = document.createElement('button');
+    btn.className = 'rm-btn';
+    btn.style.cssText = 'border-color:rgba(34,197,94,0.4); background:rgba(34,197,94,0.1); color:var(--green);';
+    btn.textContent = 'Unban';
+    btn.onclick = function () { peer._send({ type: 'unban', to: u }); };
+    row.appendChild(sp);
+    row.appendChild(btn);
+    bnl.appendChild(row);
+  });
+}
+$('adminBtn').onclick = function () {
+  renderAdminModal();
+  $('adminModal').style.display = 'flex';
+  peer._send({ type: 'banned-list' });
+  peer._send({ type: 'stats' });
+};
+$('adminCloseBtn').onclick = function () { $('adminModal').style.display = 'none'; };
+$('broadcastBtn').onclick = function () {
+  var t = $('broadcastText').value.trim();
+  if (!t) return alert('Type an announcement first');
+  if (!confirm('Send this to ALL online users?\n\n' + t)) return;
+  peer._send({ type: 'broadcast', text: t });
+  $('broadcastText').value = '';
+};
+$('passkeyBtn').onclick = function () {
+  var v = $('newPasskey').value.trim();
+  if (!v) return alert('Type a new passkey first');
+  if (!confirm('Change the unlock passkey for EVERYONE?')) return;
+  peer._send({ type: 'set-passkey', value: v });
+  $('newPasskey').value = '';
+};
+
+/* ---------- group members (owner) ---------- */
+$('membersBtn').onclick = function () {
+  if (!isGroup(activeChat) || groups[activeChat].owner !== myName) return;
+  var g = groups[activeChat];
+  var ml = $('membersManage');
+  ml.innerHTML = '';
+  g.members.forEach(function (m) {
+    if (m === myName) return;
+    var row = document.createElement('div');
+    row.className = 'member-row';
+    var sp = document.createElement('span');
+    sp.textContent = disp(m);
+    sp.style.flex = '1';
+    var btn = document.createElement('button');
+    btn.className = 'rm-btn';
+    btn.textContent = 'Remove';
+    btn.onclick = function () {
+      removeMember(activeChat, m);
+      $('membersModal').style.display = 'none';
+    };
+    row.appendChild(sp);
+    row.appendChild(btn);
+    ml.appendChild(row);
+  });
+  $('membersModal').style.display = 'flex';
+};
+$('membersCloseBtn').onclick = function () { $('membersModal').style.display = 'none'; };
+function removeMember(gname, member) {
+  var g = groups[gname];
+  if (!g || (g.owner !== myName && !peer.isAdmin)) return;
+  var newMembers = g.members.filter(function (m) { return m !== member; });
+  g.members = newMembers;
+  newMembers.forEach(function (m) {
+    if (m === myName) return;
+    var mc = connFor(m);
+    if (mc && mc.open) mc.send({ g: gname, gm: newMembers, owner: g.owner, ctrl: 'group-update' });
+  });
+  var mk = connFor(member);
+  if (mk && mk.open) mk.send({ g: gname, ctrl: 'group-kick' });
+  addGroupEntry(gname, { k: 'sys', s: 'You removed ' + disp(member) + ' from the group' });
+  saveGroups(); renderContacts();
+  if (activeChat === gname) $('statusText').textContent = newMembers.length + ' members';
+}
 
 /* ---------- group creation ---------- */
 var selectedMembers = {};
@@ -1692,23 +2357,30 @@ $('newGroupBtn').onclick = function () {
   selectedMembers = {};
   var ml = $('memberList');
   ml.innerHTML = '';
-  var onlineContacts = contacts.filter(function (ct) { return lastPeers.indexOf(ct) !== -1; });
-  if (!onlineContacts.length) {
+  if (!contacts.length) {
     var d = document.createElement('div');
     d.style.cssText = 'font-size:0.7rem; color:var(--dim); padding:6px 2px;';
-    d.textContent = 'no online contacts right now';
+    d.textContent = 'no contacts yet — add contacts first';
     ml.appendChild(d);
   }
-  onlineContacts.forEach(function (ct) {
+  contacts.forEach(function (ct) {
+    var online = lastPeers.indexOf(ct) !== -1;
     var row = document.createElement('label');
     row.className = 'member-row';
     var cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.onchange = function () { if (this.checked) selectedMembers[ct] = true; else delete selectedMembers[ct]; };
     var sp = document.createElement('span');
-    sp.textContent = ct;
+    sp.textContent = disp(ct) + (online ? '' : ' (offline)');
+    sp.style.flex = '1';
+    if (online) sp.style.color = 'var(--green)';
     row.appendChild(cb);
     row.appendChild(sp);
+    if (online) {
+      var dot = document.createElement('span');
+      dot.style.cssText = 'width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 6px var(--green);';
+      row.appendChild(dot);
+    }
     ml.appendChild(row);
   });
   $('groupModal').style.display = 'flex';
@@ -1723,11 +2395,12 @@ function createGroup() {
   if (!members.length) return alert('Select at least one member');
   members.push(myName);
   if (members.length > 10) return alert('Max 10 members per group');
-  ensureGroup(gname, members);
+  var g = ensureGroup(gname, members);
+  g.owner = myName;
   members.forEach(function (m) {
     if (m === myName) return;
     var mc = connFor(m);
-    if (mc && mc.open) mc.send({ g: gname, gm: members, ctrl: 'group-new' });
+    if (mc && mc.open) mc.send({ g: gname, gm: members, owner: myName, ctrl: 'group-new' });
   });
   addGroupEntry(gname, { k: 'sys', s: 'Group "' + gname + '" created — ' + (members.length - 1) + ' member(s)' });
   saveGroups();
@@ -1766,7 +2439,13 @@ $('newMyName').addEventListener('keydown', function (e) { if (e.key === 'Enter')
 
 /* auto-start if a profile is saved (no re-entering details) */
 loadContacts();
+loadRenames();
 (function () {
+  var qp = new URLSearchParams(location.search);
+  if (qp.get('name')) {
+    $('myId').value = String(qp.get('name')).slice(0, 20);
+    return;
+  }
   var p = loadProfile();
   if (p && p.name) {
     $('myId').value = p.name;
@@ -1780,6 +2459,9 @@ loadContacts();
     start(true);
   }
 })();
+
+// incognito mode: hide everything behind the Saturn lock on every page load
+showLock();
 </script>
 </body>
 </html>
