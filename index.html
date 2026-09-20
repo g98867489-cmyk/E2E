@@ -445,7 +445,6 @@
     <div class="side-tools">
       <button class="add-btn" id="addContactBtn">+ Add new contact</button>
       <button class="add-btn" id="newGroupBtn" style="margin-top:6px; border-color:rgba(255,255,255,0.3); background:rgba(255,255,255,0.05); color:#e8e8e8;">+ New group</button>
-      <button class="add-btn" id="removeUserBtn" style="margin-top:6px; border-color:rgba(255,255,255,0.3); background:rgba(255,255,255,0.05); color:#e8e8e8;">✕ Remove a user</button>
       <span class="contact-count" id="contactCount">0/10</span>
     </div>
     <div id="contactList"></div>
@@ -2601,8 +2600,7 @@ function handleRemoteRemoval(d, from) {
   }
 }
 
-/* ---------- remove-user modal ---------- */
-$('removeUserBtn').onclick = function () { renderUsersModal(); $('usersModal').style.display = 'flex'; };
+/* remove-user: sidebar ✕ button on each contact row (removeUserNow) */
 $('usersCloseBtn').onclick = function () { $('usersModal').style.display = 'none'; };
 function renderUsersModal() {
   var box = $('usersManage'); box.innerHTML = '';
