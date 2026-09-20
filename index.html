@@ -7,13 +7,13 @@
 <link rel="icon" href="data:," />
 <style>
   :root {
-    --bg: #000000; --bg2: #0a0a0e; --side: #050507;
+    --bg: #000000; --bg2: #0a0a0a; --side: #050505;
     --glass: rgba(255,255,255,0.045); --glass2: rgba(255,255,255,0.08);
     --line: rgba(255,255,255,0.09);
-    --text: #f4f4f8; --muted: #8b8b9e; --dim: #5c5c70;
-    --accent1: #7c3aed; --accent2: #06b6d4;
-    --grad: linear-gradient(135deg, var(--accent1), var(--accent2));
-    --danger: #ef4444; --green: #22c55e;
+    --text: #f5f5f5; --muted: #8a8a8a; --dim: #585858;
+    --accent1: #ffffff; --accent2: #8e8e8e;
+    --grad: linear-gradient(135deg, #ffffff, #8e8e8e);
+    --danger: #e8e8e8; --green: #f0f0f0;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; height: 100dvh; }
@@ -52,8 +52,8 @@
   .chk input { accent-color: var(--accent1); width: 15px; height: 15px; }
   .btn {
     border: 0; border-radius: 12px; padding: 13px; font-size: 0.88rem; font-weight: 700;
-    cursor: pointer; background: var(--grad); color: #fff; width: 100%;
-    box-shadow: 0 8px 24px rgba(124,58,237,0.35); transition: all .18s ease;
+    cursor: pointer; background: var(--grad); color: #000; width: 100%;
+    box-shadow: 0 8px 24px rgba(255,255,255,0.35); transition: all .18s ease;
   }
   .btn:hover { transform: translateY(-1px); }
   .btn2 {
@@ -78,7 +78,7 @@
   .avatar {
     width: 40px; height: 40px; border-radius: 50%; background: var(--grad);
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.95rem; color: #fff; flex-shrink: 0;
+    font-weight: 700; font-size: 0.95rem; color: #000; flex-shrink: 0;
     box-shadow: 0 0 0 2px rgba(255,255,255,0.08);
   }
   .side-head .me-name { font-weight: 700; font-size: 0.92rem; }
@@ -95,11 +95,11 @@
   .mini-btn svg { width: 16px; height: 16px; }
   .side-tools { padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; }
   .add-btn {
-    flex: 1; border: 1px dashed rgba(124,58,237,0.5); background: rgba(124,58,237,0.08);
-    color: #c4b5fd; border-radius: 12px; padding: 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    flex: 1; border: 1px dashed rgba(255,255,255,0.5); background: rgba(255,255,255,0.08);
+    color: #d6d6d6; border-radius: 12px; padding: 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
     transition: all .15s;
   }
-  .add-btn:hover { background: rgba(124,58,237,0.16); }
+  .add-btn:hover { background: rgba(255,255,255,0.16); }
   .contact-count { align-self: center; font-size: 0.66rem; color: var(--dim); white-space: nowrap; }
   #contactList { flex: 1; overflow-y: auto; }
   .contact {
@@ -114,7 +114,7 @@
   .contact .c-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
   .contact .c-dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
   .badge {
-    background: var(--accent1); color: #fff; font-size: 0.62rem; font-weight: 700;
+    background: var(--accent1); color: #000; font-size: 0.62rem; font-weight: 700;
     min-width: 18px; height: 18px; border-radius: 99px; display: flex; align-items: center; justify-content: center;
     padding: 0 5px;
   }
@@ -133,7 +133,7 @@
 
   .chat-head {
     display: flex; align-items: center; gap: 12px; padding: 10px 16px;
-    background: rgba(13,13,20,0.88); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line);
+    background: rgba(12,12,12,0.88); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line);
   }
   .chat-head .h-name { font-weight: 700; font-size: 0.95rem; }
   .chat-head .h-sub { font-size: 0.68rem; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 5px; }
@@ -145,8 +145,8 @@
   }
   .icon-btn:hover { background: var(--glass2); }
   .icon-btn svg { width: 17px; height: 17px; }
-  .icon-btn.call { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.3); color: var(--green); }
-  .icon-btn.lockb { color: #fbbf24; background: rgba(251,191,36,0.09); border-color: rgba(251,191,36,0.25); }
+  .icon-btn.call { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); color: var(--green); }
+  .icon-btn.lockb { color: #e5e5e5; background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.25); }
   #backBtn { display: none; }
 
   #log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 9px; }
@@ -159,10 +159,10 @@
   .msg .meta { display: flex; gap: 8px; align-items: baseline; margin-bottom: 2px; }
   .msg .meta .who { font-size: 0.64rem; font-weight: 700; opacity: 0.85; }
   .msg .meta .time { font-size: 0.58rem; opacity: 0.55; margin-left: auto; }
-  .msg.me { align-self: flex-end; background: linear-gradient(135deg, #5b21b6, #4f46e5); border-bottom-right-radius: 5px; }
+  .msg.me { align-self: flex-end; background: linear-gradient(135deg, #1e1e1e, #2b2b2b); border-bottom-right-radius: 5px; }
   .msg.them { align-self: flex-start; background: var(--glass2); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
   .msg.sys { align-self: center; background: transparent; color: var(--dim); font-size: 0.68rem; font-style: italic; text-align: center; }
-  .msg a { color: #67e8f9; text-decoration: none; border-bottom: 1px dotted rgba(103,232,249,0.5); }
+  .msg a { color: #e8e8e8; text-decoration: none; border-bottom: 1px dotted rgba(255,255,255,0.5); }
   .msg img { max-width: 100%; max-height: 270px; border-radius: 10px; display: block; margin-top: 4px; cursor: zoom-in; }
   .msg video { max-width: 100%; max-height: 290px; border-radius: 10px; display: block; margin-top: 4px; }
   .msg audio { width: 230px; margin-top: 4px; display: block; filter: invert(0.9) hue-rotate(180deg); }
@@ -172,12 +172,12 @@
     display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.25);
     border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; margin-top: 6px; min-width: 210px;
   }
-  .filecard .ficon { width: 36px; height: 36px; border-radius: 10px; background: var(--grad);
+  .filecard .ficon { width: 36px; height: 36px; border-radius: 10px; background: var(--grad); color: #000;
     display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 800; color: #fff; flex-shrink: 0; }
   .filecard .fbody { flex: 1; min-width: 0; }
   .filecard .fname { font-size: 0.76rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .filecard .fsize { font-size: 0.63rem; opacity: 0.6; margin-top: 1px; }
-  .filecard a.dl { color: #67e8f9; font-size: 0.64rem; text-decoration: none; flex-shrink: 0; }
+  .filecard a.dl { color: #e8e8e8; font-size: 0.64rem; text-decoration: none; flex-shrink: 0; }
   .prog { height: 4px; background: rgba(255,255,255,0.12); border-radius: 99px; overflow: hidden; margin-top: 6px; }
   .prog i { display: block; height: 100%; width: 0%; background: var(--grad); border-radius: 99px; transition: width .12s linear; }
 
@@ -195,8 +195,8 @@
     color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     transition: all .15s;
   }
-  #emojiBtn:hover { background: var(--glass2); color: #fbbf24; }
-  #emojiBtn.on { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  #emojiBtn:hover { background: var(--glass2); color: #e5e5e5; }
+  #emojiBtn.on { background: rgba(255,255,255,0.15); color: #e5e5e5; }
   #emojiBtn svg { width: 18px; height: 18px; }
 
   .passkey-row { display: flex; gap: 10px; align-items: center; }
@@ -210,15 +210,15 @@
 
   #composer {
     display: flex; gap: 8px; padding: 11px 14px 13px; align-items: center;
-    background: rgba(13,13,20,0.88); backdrop-filter: blur(14px); border-top: 1px solid var(--line);
+    background: rgba(12,12,12,0.88); backdrop-filter: blur(14px); border-top: 1px solid var(--line);
   }
   #msg {
     flex: 1; background: var(--bg2); border: 1px solid var(--line); border-radius: 20px;
     color: var(--text); padding: 10px 17px; font-size: 0.87rem; outline: none;
   }
-  #msg:focus { border-color: rgba(124,58,237,0.6); }
+  #msg:focus { border-color: rgba(255,255,255,0.6); }
   #sendBtn {
-    width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--grad); color: #fff;
+    width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--grad); color: #000;
     cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
   #sendBtn svg { width: 16px; height: 16px; }
@@ -232,7 +232,7 @@
 
   #dropZone {
     display: none; position: fixed; inset: 12px; z-index: 18; border-radius: 20px;
-    border: 2px dashed rgba(124,58,237,0.7); background: rgba(124,58,237,0.08);
+    border: 2px dashed rgba(255,255,255,0.7); background: rgba(255,255,255,0.08);
     align-items: center; justify-content: center; font-size: 0.9rem; pointer-events: none;
     backdrop-filter: blur(3px);
   }
@@ -255,13 +255,13 @@
   #onlineChips { display: flex; flex-wrap: wrap; gap: 6px; }
   #onlineChips:empty::after { content: 'nobody online right now'; font-size: 0.68rem; color: var(--dim); }
   .chip {
-    border: 1px solid rgba(34,197,94,0.35); background: rgba(34,197,94,0.1); color: var(--green);
+    border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.1); color: var(--green);
     border-radius: 99px; padding: 4px 12px; font-size: 0.72rem; cursor: pointer; font-weight: 600;
   }
-  .chip:hover { background: rgba(34,197,94,0.2); }
+  .chip:hover { background: rgba(255,255,255,0.2); }
   .modal-note { font-size: 0.66rem; color: var(--dim); }
 
-  .gavatar { background: linear-gradient(135deg, #0891b2, #14b8a6) !important; }
+  .gavatar { background: linear-gradient(135deg, #2a2a2a, #101010) !important; color: #fff !important; }
   .member-row {
     display: flex; align-items: center; gap: 10px; padding: 9px 11px;
     border: 1px solid var(--line); border-radius: 10px; cursor: pointer;
@@ -271,19 +271,26 @@
 .rx { cursor: pointer; opacity: 0; font-size: 0.7rem; padding: 1px 4px; border-radius: 6px; transition: opacity .12s; margin-left: auto; }
 .contact:hover .rx { opacity: 0.65; }
 .rx:hover { opacity: 1 !important; background: var(--glass2); }
-.rm-btn { border: 1px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.1); color: var(--danger); border-radius: 8px; padding: 5px 12px; font-size: 0.72rem; cursor: pointer; }
-.rm-btn:hover { background: rgba(239,68,68,0.25); }
+.rm-btn { border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); color: var(--danger); border-radius: 8px; padding: 5px 12px; font-size: 0.72rem; cursor: pointer; }
+.rm-btn:hover { background: rgba(255,255,255,0.25); }
   .member-row input { accent-color: var(--accent2); width: 15px; height: 15px; }
 
-  #micBtn {
+  #micBtn, #kbBtn {
     width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass);
     color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     transition: all .15s;
   }
-  #micBtn:hover { background: var(--glass2); color: var(--text); }
-  #micBtn.rec { background: rgba(239,68,68,0.25); color: var(--danger); border-color: rgba(239,68,68,0.5); animation: pulse 1.2s infinite; }
+  #micBtn:hover, #kbBtn:hover { background: var(--glass2); color: var(--text); }
+  #micBtn.rec { background: rgba(255,255,255,0.25); color: var(--danger); border-color: rgba(255,255,255,0.5); animation: pulse 1.2s infinite; }
   @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-  #micBtn svg { width: 17px; height: 17px; }
+  #micBtn svg, #kbBtn svg { width: 17px; height: 17px; }
+  #kbBtn.on { background: var(--glass2); color: var(--text); }
+  #kb { padding: 6px 4px 8px; background: rgba(255,255,255,0.02); border-top: 1px solid var(--line); }
+  #kb .krow { display: flex; justify-content: center; gap: 5px; margin: 5px 0; }
+  #kb .k { flex: 1; max-width: 40px; min-width: 26px; height: 38px; background: #161616; color: var(--text); border: 1px solid var(--line); border-radius: 7px; font-size: 0.95rem; font-family: inherit; cursor: pointer; user-select: none; padding: 0; }
+  #kb .k:active { background: #2e2e2e; }
+  #kb .k.wide { flex: 1.7; max-width: 90px; font-size: 0.78rem; color: var(--muted); }
+  #kb .k.on { background: #fff; color: #000; }
   .ticks { font-size: 0.62rem; opacity: 0.65; margin-left: 6px; float: right; }
   .rxn { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
   .rxn span { background: rgba(255,255,255,0.1); border-radius: 99px; padding: 1px 8px; font-size: 0.72rem; cursor: pointer; }
@@ -302,21 +309,21 @@
   .saturn .ring {
     position: absolute; left: 50%; top: 50%; width: 235px; height: 64px;
     transform: translate(-50%,-50%) rotate(-16deg); border-radius: 50%;
-    border: 9px solid rgba(216,190,140,0.5);
-    border-top-color: rgba(243,226,180,0.75); border-bottom-color: rgba(150,125,75,0.4);
-    box-shadow: 0 0 30px rgba(216,190,140,0.18);
+    border: 9px solid rgba(200,200,200,0.5);
+    border-top-color: rgba(236,236,236,0.75); border-bottom-color: rgba(120,120,120,0.4);
+    box-shadow: 0 0 30px rgba(200,200,200,0.18);
   }
   .saturn .ball {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
     width: 128px; height: 128px; border-radius: 50%; z-index: 2;
-    background: radial-gradient(circle at 33% 28%, #f6e3b4 0%, #e8c877 34%, #b8873b 68%, #6e4f23 100%);
-    box-shadow: inset -20px -16px 44px rgba(0,0,0,0.5), 0 0 70px rgba(232,200,119,0.28);
+    background: radial-gradient(circle at 33% 28%, #dcdcdc 0%, #b0b0b0 34%, #747474 68%, #4a4a4a 100%);
+    box-shadow: inset -20px -16px 44px rgba(0,0,0,0.5), 0 0 70px rgba(255,255,255,0.28);
   }
   .saturn .ring-front {
     position: absolute; left: 50%; top: 50%; width: 235px; height: 64px; z-index: 3;
     transform: translate(-50%,-50%) rotate(-16deg); border-radius: 50%;
-    border: 9px solid rgba(216,190,140,0.5);
-    border-top-color: transparent; border-left-color: rgba(243,226,180,0.65); border-right-color: rgba(150,125,75,0.42);
+    border: 9px solid rgba(200,200,200,0.5);
+    border-top-color: transparent; border-left-color: rgba(236,236,236,0.65); border-right-color: rgba(120,120,120,0.42);
     clip-path: inset(52% 0 0 0);
   }
   #lockScreen h2 {
@@ -331,10 +338,10 @@
     background: var(--glass); border: 1px solid var(--line); border-radius: 13px;
     padding: 10px 14px; font-size: 0.8rem; line-height: 1.55; display: flex; gap: 10px;
   }
-  .fact b { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #c4b5fd; margin-bottom: 2px; }
+  .fact b { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #d6d6d6; margin-bottom: 2px; }
   .unlock-btn {
     border: 0; border-radius: 14px; padding: 13px 40px; font-size: 0.9rem; font-weight: 700;
-    background: var(--grad); color: #fff; cursor: pointer; box-shadow: 0 10px 30px rgba(124,58,237,0.4);
+    background: var(--grad); color: #000; cursor: pointer; box-shadow: 0 10px 30px rgba(255,255,255,0.12);
     display: flex; align-items: center; gap: 9px;
   }
   .unlock-btn:hover { transform: translateY(-2px); }
@@ -342,7 +349,7 @@
 
   /* ================= CALL OVERLAY ================= */
   #callOverlay {
-    display: none; position: fixed; inset: 0; z-index: 22; background: rgba(3,3,8,0.94);
+    display: none; position: fixed; inset: 0; z-index: 22; background: rgba(3,3,3,0.94);
     backdrop-filter: blur(20px); flex-direction: column; align-items: center; justify-content: center; gap: 16px;
   }
   #remoteVideo { width: min(92vw, 880px); aspect-ratio: 16/9; background: #000; border-radius: 18px; border: 1px solid var(--line); }
@@ -357,13 +364,13 @@
   .call-head .ca-sub { font-size: 0.78rem; color: var(--muted); margin-top: 4px; letter-spacing: 0.04em; }
   .call-avatar {
     width: 100px; height: 100px; border-radius: 50%; background: var(--grad);
-    display: none; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 800; color: #fff;
+    display: none; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 800; color: #000;
     animation: ring 1.6s infinite;
   }
   @keyframes ring {
-    0% { box-shadow: 0 0 0 0 rgba(124,58,237,0.55); }
-    70% { box-shadow: 0 0 0 24px rgba(124,58,237,0); }
-    100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); }
+    0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.55); }
+    70% { box-shadow: 0 0 0 24px rgba(255,255,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
   }
   .call-actions { display: flex; gap: 15px; }
   .cbtn {
@@ -372,10 +379,10 @@
   }
   .cbtn svg { width: 21px; height: 21px; }
   .cbtn:hover { transform: scale(1.08); }
-  .cbtn.accept { background: var(--green); color: #052e16; }
+  .cbtn.accept { background: #ffffff; color: #000000; }
   .cbtn.reject { background: var(--danger); color: #fff; }
   .cbtn.neutral { background: var(--glass2); color: var(--text); border: 1px solid var(--line); }
-  .cbtn.active-warn { background: rgba(245,158,11,0.25); color: #fbbf24; }
+  .cbtn.active-warn { background: rgba(255,255,255,0.25); color: #e5e5e5; }
   #incomingCall { display: none; flex-direction: column; gap: 16px; align-items: center; }
   #incomingCall.show { display: flex; }
   #incomingCall .call-avatar.show { display: flex; }
@@ -424,7 +431,7 @@
         <div class="me-sub"><span class="dot" id="myDot"></span><span id="myStatus">connecting…</span></div>
       </div>
       <div class="spacer"></div>
-      <button class="mini-btn" id="adminBtn" title="Admin panel" style="display:none; color:#fbbf24;">
+      <button class="mini-btn" id="adminBtn" title="Admin panel" style="display:none; color:#e5e5e5;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       </button>
       <button class="mini-btn" id="editNameBtn" title="Edit profile">
@@ -436,7 +443,7 @@
     </div>
     <div class="side-tools">
       <button class="add-btn" id="addContactBtn">+ Add new contact</button>
-      <button class="add-btn" id="newGroupBtn" style="margin-top:6px; border-color:rgba(6,182,212,0.45); background:rgba(6,182,212,0.07); color:#67e8f9;">+ New group</button>
+      <button class="add-btn" id="newGroupBtn" style="margin-top:6px; border-color:rgba(255,255,255,0.3); background:rgba(255,255,255,0.05); color:#e8e8e8;">+ New group</button>
       <span class="contact-count" id="contactCount">0/10</span>
     </div>
     <div id="contactList"></div>
@@ -466,7 +473,7 @@
           <button class="icon-btn call" id="videoBtn" title="Video call">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
           </button>
-          <button class="icon-btn" id="membersBtn" title="Group members" style="display:none; color:#67e8f9;">
+          <button class="icon-btn" id="membersBtn" title="Group members" style="display:none; color:#e8e8e8;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </button>
           <button class="icon-btn lockb" id="lockBtn" title="Lock (Saturn)">
@@ -477,6 +484,9 @@
       <div id="log"></div>
       <div id="emojiBar"></div>
       <div id="typing">typing…</div>
+      <div id="kb" style="display:none;">
+        <div id="kbRows"></div>
+      </div>
       <div class="rec-tip" id="recTip">recording…</div>
       <div id="composer">
         <button id="emojiBtn" title="Emoji">
@@ -486,6 +496,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
         </button>
         <input id="msg" placeholder="Type a message… (paste links too)" autocomplete="off" />
+        <button id="kbBtn" title="Inbuilt keyboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="10"/><line x1="10" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="14" y2="10"/><line x1="18" y1="10" x2="18" y2="10"/><line x1="7" y1="14" x2="17" y2="14"/></svg>
+        </button>
         <button id="micBtn" title="Voice message">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
         </button>
@@ -534,6 +547,7 @@
   <div class="box">
     <h3>Group members</h3>
     <div id="membersManage" style="max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
+    <button class="btn2" id="delGroupBtn" style="border-color:rgba(255,255,255,0.3);">Delete group</button>
     <button class="btn2" id="membersCloseBtn">Close</button>
     <div class="modal-note">You are the group owner — you can remove members.</div>
   </div>
@@ -556,9 +570,17 @@
 <div id="profileModal">
   <div class="box">
     <h3>Edit profile</h3>
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
+      <div class="avatar" id="profAvatarBig" style="width:64px; height:64px; font-size:1.5rem; cursor:pointer;" title="Change photo">?</div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <button class="btn2" id="changePhotoBtn" style="width:auto; padding:9px 14px;">Upload photo</button>
+        <button class="btn2" id="removePhotoBtn" style="width:auto; padding:9px 14px;">Remove photo</button>
+      </div>
+    </div>
+    <input type="file" id="avatarInput" accept="image/*" style="display:none;" />
     <label style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">Your name</label>
     <input type="text" id="newMyName" placeholder="new name" autocomplete="off" />
-    <button class="btn" id="saveNameBtn">Save name</button>
+    <button class="btn" id="saveNameBtn">Save changes</button>
     <button class="btn2" id="cancelNameBtn">Cancel</button>
     <div class="modal-note">Changing your name reconnects you with the new name. Contacts and chat history stay.</div>
   </div>
@@ -1431,6 +1453,73 @@ function sendMsg() {
 
 $('sendBtn').onclick = sendMsg;
 
+/* ---------- inbuilt keyboard ---------- */
+var kbShift = false, kbSym = false;
+var KB_L1 = 'qwertyuiop', KB_L2 = 'asdfghjkl', KB_L3 = 'zxcvbnm';
+var KB_S1 = '1234567890', KB_S2 = '-/:;()&@"', KB_S3 = ".,?!'";
+function kbType(ch) {
+  $('msg').value += ch;
+  $('msg').dispatchEvent(new Event('input'));
+  if (kbShift && !kbSym) { kbShift = false; renderKb(); }
+}
+function kbKey(label, cls, fn) {
+  var b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'k' + (cls ? ' ' + cls : '');
+  b.textContent = label;
+  b.onmousedown = function (e) { e.preventDefault(); fn(); };
+  return b;
+}
+function renderKb() {
+  var rows = $('kbRows');
+  rows.innerHTML = '';
+  function charRow(str) {
+    var r = document.createElement('div');
+    r.className = 'krow';
+    for (var i = 0; i < str.length; i++) {
+      (function (ch) {
+        var up = kbShift && !kbSym;
+        r.appendChild(kbKey(up ? ch.toUpperCase() : ch, '', function () { kbType(up ? ch.toUpperCase() : ch); }));
+      })(str[i]);
+    }
+    return r;
+  }
+  rows.appendChild(charRow(kbSym ? KB_S1 : KB_L1));
+  rows.appendChild(charRow(kbSym ? KB_S2 : KB_L2));
+  var r3 = document.createElement('div');
+  r3.className = 'krow';
+  r3.appendChild(kbKey('SHIFT', 'wide' + (kbShift && !kbSym ? ' on' : ''), function () { kbShift = !kbShift; renderKb(); }));
+  var l3 = kbSym ? KB_S3 : KB_L3;
+  for (var j = 0; j < l3.length; j++) {
+    (function (ch) {
+      var up = kbShift && !kbSym;
+      r3.appendChild(kbKey(up ? ch.toUpperCase() : ch, '', function () { kbType(up ? ch.toUpperCase() : ch); }));
+    })(l3[j]);
+  }
+  r3.appendChild(kbKey('DEL', 'wide', function () { $('msg').value = $('msg').value.slice(0, -1); }));
+  rows.appendChild(r3);
+  var r4 = document.createElement('div');
+  r4.className = 'krow';
+  r4.appendChild(kbKey(kbSym ? 'ABC' : '?123', 'wide', function () { kbSym = !kbSym; kbShift = false; renderKb(); }));
+  r4.appendChild(kbKey(',', '', function () { kbType(','); }));
+  r4.appendChild(kbKey('space', 'wide', function () { kbType(' '); }));
+  r4.appendChild(kbKey('.', '', function () { kbType('.'); }));
+  r4.appendChild(kbKey('SEND', '', function () {
+    $('kbBtn').classList.remove('on');
+    $('msg').readOnly = false;
+    $('kb').style.display = 'none';
+    sendMsg();
+  }));
+  rows.appendChild(r4);
+}
+$('kbBtn').onclick = function () {
+  var on = $('kb').style.display === 'none';
+  $('kb').style.display = on ? 'block' : 'none';
+  $('msg').readOnly = on;
+  $('kbBtn').classList.toggle('on', on);
+  if (on) { renderKb(); $('msg').blur(); }
+};
+
 /* ---------- voice messages ---------- */
 var rec = null, recChunks = [], recTimer = null, recSecs = 0;
 $('micBtn').onclick = function () {
@@ -1609,6 +1698,7 @@ function leaveGroupView(gname) {
 function handleGroupData(d, from) {
   ensureContact(from);
   if (mutedNames.indexOf(from) !== -1) return;
+  if (d.ctrl === 'group-del') { deleteGroup(d.g); return; }
   var g = ensureGroup(d.g, d.gm);
   if (d.owner) g.owner = d.owner;
   if (d.ctrl === 'group-new') {
@@ -1979,7 +2069,7 @@ function start(silent) {
     $('setup').style.display = 'none';
     $('app').classList.add('on');
     $('myNameEl').textContent = myName;
-    $('myAvatar').textContent = myName.charAt(0).toUpperCase();
+    setMyAvatar();
     $('myStatus').textContent = 'connecting…';
     $('myDot').classList.remove('on');
     loadHistory();
@@ -2018,7 +2108,7 @@ function start(silent) {
       $('setup').style.display = 'none';
       $('app').classList.add('on');
       $('myNameEl').textContent = myName;
-      $('myAvatar').textContent = myName.charAt(0).toUpperCase();
+      setMyAvatar();
       loadHistory();
       loadGroups();
       renderContacts();
@@ -2276,7 +2366,7 @@ function renderAdminModal() {
     sp.style.flex = '1';
     var btn = document.createElement('button');
     btn.className = 'rm-btn';
-    btn.style.cssText = 'border-color:rgba(34,197,94,0.4); background:rgba(34,197,94,0.1); color:var(--green);';
+    btn.style.cssText = 'border-color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.1); color:var(--green);';
     btn.textContent = 'Unban';
     btn.onclick = function () { peer._send({ type: 'unban', to: u }); };
     row.appendChild(sp);
@@ -2330,9 +2420,37 @@ $('membersBtn').onclick = function () {
     row.appendChild(btn);
     ml.appendChild(row);
   });
+  var gg = groups[activeChat];
+  $('delGroupBtn').style.display = (gg && (gg.owner === myName || peer.isAdmin)) ? 'block' : 'none';
   $('membersModal').style.display = 'flex';
 };
 $('membersCloseBtn').onclick = function () { $('membersModal').style.display = 'none'; };
+$('delGroupBtn').onclick = function () {
+  var gname = activeChat;
+  if (!gname || !isGroup(gname)) return;
+  var g = groups[gname];
+  if (!g || (g.owner !== myName && !peer.isAdmin)) return;
+  if (!confirm('Delete "' + gname + '" for EVERYONE in the group?')) return;
+  g.members.forEach(function (m) {
+    if (m === myName) return;
+    var mc = connFor(m);
+    if (mc && mc.open) mc.send({ g: gname, gm: g.members, ctrl: 'group-del' });
+  });
+  deleteGroup(gname);
+};
+function deleteGroup(gname) {
+  if (!groups[gname]) return;
+  delete groups[gname];
+  saveGroups();
+  $('membersModal').style.display = 'none';
+  if (activeChat === gname) {
+    activeChat = null;
+    $('app').classList.remove('chat-open');
+    $('chatPane').classList.remove('on');
+    $('emptyState').style.display = 'flex';
+  }
+  renderContacts();
+}
 function removeMember(gname, member) {
   var g = groups[gname];
   if (!g || (g.owner !== myName && !peer.isAdmin)) return;
@@ -2411,12 +2529,76 @@ $('createGroupBtn').onclick = createGroup;
 $('newGroupName').addEventListener('keydown', function (e) { if (e.key === 'Enter') createGroup(); });
 
 /* ---------- profile name change ---------- */
-$('editNameBtn').onclick = function () {
+function renderProfAvatar() {
+  var av = '';
+  try { av = (loadProfile() || {}).avatar || ''; } catch (_) {}
+  var el = $('profAvatarBig');
+  el.style.backgroundImage = '';
+  if (av) {
+    el.textContent = '';
+    el.style.backgroundImage = 'url(' + av + ')';
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+  } else {
+    el.textContent = myName.charAt(0).toUpperCase();
+  }
+}
+function openProfileModal() {
   $('newMyName').value = myName;
+  renderProfAvatar();
   $('profileModal').style.display = 'flex';
   setTimeout(function () { $('newMyName').focus(); }, 50);
-};
+}
+$('editNameBtn').onclick = openProfileModal;
+$('myAvatar').onclick = openProfileModal;
+$('myNameEl').onclick = openProfileModal;
+function saveAvatar(dataUrl) {
+  var prof = loadProfile() || {};
+  if (dataUrl) prof.avatar = dataUrl; else delete prof.avatar;
+  localStorage.setItem(LS.profile, JSON.stringify(prof));
+  renderProfAvatar();
+  setMyAvatar();
+}
+function processAvatarFile(file, cb) {
+  var img = new Image();
+  var ur = URL.createObjectURL(file);
+  img.onload = function () {
+    var sz = Math.min(img.width, img.height);
+    var cv = document.createElement('canvas');
+    cv.width = cv.height = 128;
+    cv.getContext('2d').drawImage(img, (img.width - sz) / 2, (img.height - sz) / 2, sz, sz, 0, 0, 128, 128);
+    URL.revokeObjectURL(ur);
+    cb(cv.toDataURL('image/jpeg', 0.85));
+  };
+  img.onerror = function () { URL.revokeObjectURL(ur); alert('Could not read that image'); };
+  img.src = ur;
+}
+$('changePhotoBtn').onclick = function () { $('avatarInput').click(); };
+$('profAvatarBig').onclick = function () { $('avatarInput').click(); };
+$('avatarInput').addEventListener('change', function () {
+  var f = this.files && this.files[0];
+  this.value = '';
+  if (!f) return;
+  if (f.type.indexOf('image/') !== 0) return alert('Please choose an image file');
+  processAvatarFile(f, saveAvatar);
+});
+$('removePhotoBtn').onclick = function () { saveAvatar(null); };
 $('cancelNameBtn').onclick = function () { $('profileModal').style.display = 'none'; };
+function setMyAvatar() {
+  var av = '';
+  try { av = (loadProfile() || {}).avatar || ''; } catch (_) {}
+  var el = $('myAvatar');
+  el.style.backgroundImage = '';
+  if (av) {
+    el.textContent = '';
+    el.style.backgroundImage = 'url(' + av + ')';
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+  } else {
+    el.textContent = myName.charAt(0).toUpperCase();
+  }
+}
+
 function changeMyName() {
   var n = $('newMyName').value.trim();
   if (!n) return alert('Please enter a name');
