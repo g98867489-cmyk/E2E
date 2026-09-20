@@ -238,11 +238,11 @@
   }
 
   /* ================= ADD CONTACT MODAL ================= */
-  #addModal, #profileModal, #groupModal, #renameModal, #membersModal, #adminModal {
+  #addModal, #profileModal, #groupModal, #renameModal, #membersModal, #adminModal, #usersModal {
     display: none; position: fixed; inset: 0; z-index: 25; background: rgba(0,0,0,0.6);
     backdrop-filter: blur(6px); align-items: center; justify-content: center;
   }
-  #addModal .box, #profileModal .box, #groupModal .box, #renameModal .box, #membersModal .box, #adminModal .box {
+  #addModal .box, #profileModal .box, #groupModal .box, #renameModal .box, #membersModal .box, #adminModal .box, #usersModal .box {
     width: min(360px, 90vw); background: var(--bg2); border: 1px solid var(--line);
     border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 10px;
   }
@@ -271,6 +271,7 @@
 .rx { cursor: pointer; opacity: 0; font-size: 0.7rem; padding: 1px 4px; border-radius: 6px; transition: opacity .12s; margin-left: auto; }
 .contact:hover .rx { opacity: 0.65; }
 .rx:hover { opacity: 1 !important; background: var(--glass2); }
+.rx.rmx:hover { color: #ff6b6b !important; background: rgba(255,107,107,0.15) !important; }
 .rm-btn { border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); color: var(--danger); border-radius: 8px; padding: 5px 12px; font-size: 0.72rem; cursor: pointer; }
 .rm-btn:hover { background: rgba(255,255,255,0.25); }
   .member-row input { accent-color: var(--accent2); width: 15px; height: 15px; }
@@ -444,6 +445,7 @@
     <div class="side-tools">
       <button class="add-btn" id="addContactBtn">+ Add new contact</button>
       <button class="add-btn" id="newGroupBtn" style="margin-top:6px; border-color:rgba(255,255,255,0.3); background:rgba(255,255,255,0.05); color:#e8e8e8;">+ New group</button>
+      <button class="add-btn" id="removeUserBtn" style="margin-top:6px; border-color:rgba(255,255,255,0.3); background:rgba(255,255,255,0.05); color:#e8e8e8;">✕ Remove a user</button>
       <span class="contact-count" id="contactCount">0/10</span>
     </div>
     <div id="contactList"></div>
@@ -596,6 +598,19 @@
     <button class="btn" id="addConfirmBtn">Add contact</button>
     <button class="btn2" id="addCancelBtn">Cancel</button>
     <div class="modal-note">Max 10 contacts. Online users appear below — tap to add instantly.</div>
+  </div>
+</div>
+
+<!-- ============ REMOVE USER ============ -->
+<div id="usersModal">
+  <div class="box">
+    <h3>Remove user</h3>
+    <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">All users</div>
+    <div id="usersManage" style="max-height:210px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
+    <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Removed users</div>
+    <div id="usersRemoved" style="max-height:110px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
+    <button class="btn2" id="usersCloseBtn">Close</button>
+    <div class="modal-note">Anyone can remove any user — they disappear from everyone's UI. "Aniruddha" is protected and can never be removed.</div>
   </div>
 </div>
 
@@ -1027,7 +1042,7 @@ function saveRenames() { try { localStorage.setItem('e2e.renames', JSON.stringif
 function loadRenames() { try { renames = JSON.parse(localStorage.getItem('e2e.renames')) || {}; } catch (_) { renames = {}; } }
 function ensureGroup(gname, members) {
   var g = groups[gname] || (groups[gname] = { name: gname, members: [], list: [], unread: 0 });
-  if (members && members.length) g.members = members;
+  if (members && members.length) g.members = members.filter(function (m) { return !isRemovedUser(m); });
   return g;
 }
 function addGroupEntry(gname, entry, opts) {
@@ -1074,6 +1089,14 @@ function renderContacts() {
     rx.textContent = '\u270E';
     rx.onclick = function (e) { e.stopPropagation(); openRename(name); };
     row.querySelector('.c-name').appendChild(rx);
+    if (!isProtectedUser(name)) {
+      var rmx = document.createElement('span');
+      rmx.className = 'rx rmx';
+      rmx.title = 'Remove from webapp';
+      rmx.textContent = '\u2715';
+      rmx.onclick = function (e) { e.stopPropagation(); removeUserNow(name); };
+      row.querySelector('.c-name').appendChild(rmx);
+    }
     row.onclick = function () { openChat(name); };
     listEl.appendChild(row);
   });
@@ -1288,7 +1311,7 @@ $('backBtn').onclick = function () {
 function connFor(name) { return peer._connections[name]; }
 
 function ensureConn(name) {
-  if (!peer) return;
+  if (!peer || isRemovedUser(name)) return;
   var c = connFor(name);
   if (c && c.open) return c;
   if (lastPeers.indexOf(name) !== -1) {
@@ -1313,7 +1336,7 @@ function updateChatStatus(name) {
 
 function ensureContact(name) {
   // jab koi humse connect kare / message bheje, wo apne aap contact ban jaaye
-  if (!name || name === myName || contacts.indexOf(name) !== -1) return;
+  if (!name || name === myName || isRemovedUser(name) || contacts.indexOf(name) !== -1) return;
   if (contacts.length >= 10) return;
   contacts.push(name);
   saveContacts();
@@ -1325,6 +1348,10 @@ function wireConn(c) {
   ensureContact(name);
   c.on('open', function () {
     flushQueue(name);
+    // sync: apni removed-users list naye peer ko bhej do (offline the tab bhi pata chale)
+    if (removedUsers.length) {
+      removedUsers.forEach(function (rn) { try { c.send({ f: 'user-remove', rm: rn }); } catch (_) {} });
+    }
     if (activeChat === name) updateChatStatus(name);
     if (!chats[name] || !chats[name]._greeted) {
       chats[name] = chats[name] || { list: [], unread: 0 };
@@ -1334,6 +1361,13 @@ function wireConn(c) {
   });
   c.on('data', function (d) {
     if (d instanceof ArrayBuffer) return handleChunk(d, name);
+    if (isRemovedUser(name)) {
+      var kick = connFor(name);
+      if (kick && kick.open) { try { kick.send({ f: 'user-remove', rm: name }); } catch (_) {} }
+      if (peer) { try { peer.drop(name); } catch (_) {} }
+      return;
+    }
+    if (d && d.f === 'user-remove') return handleRemoteRemoval(d, name);
     if (d && d.f === 'hb') return;
     if (d && d.g) return handleGroupData(d, name);
     if (d && d.f === 'read') return markRead(name, d.mid);
@@ -2184,6 +2218,7 @@ function addContact(name) {
   name = (name || '').trim();
   if (!name) return alert('Please enter a name');
   if (name === myName) return alert('That is you 😄 enter someone else');
+  if (isRemovedUser(name)) return alert('This user was removed from the webapp.');
   if (contacts.indexOf(name) !== -1) { $('addModal').style.display = 'none'; return openChat(name); }
   if (contacts.length >= 10) return alert('You can add up to 10 contacts');
   contacts.push(name);
@@ -2206,6 +2241,10 @@ function start(silent) {
   if (peer) return;
   myName = $('myId').value.trim();
   if (!myName) return alert('Please enter your name first!');
+  // "Aniruddha" reserved — sirf ek hi user is naam family ka ho sakta hai
+  if (isAniruddhaName(myName) && myName !== 'Aniruddha' && someoneElseIsAniruddha(myName)) {
+    return alert('Only ONE user can be "Aniruddha" — that name is already taken. Please choose another name.');
+  }
   saveProfile();
 
   var srvUrl = $('serverUrl').value.trim();
@@ -2274,7 +2313,7 @@ function start(silent) {
 
 
   peer.on('peers', function (ids) {
-    lastPeers = ids;
+    lastPeers = ids.filter(function (n) { return removedUsers.indexOf(n) === -1; });
     renderContacts();
     // auto-connect to online contacts and group members (always ready)
     ids.forEach(function (name) {
@@ -2293,6 +2332,7 @@ function start(silent) {
       });
     });
     if (activeChat && !isGroup(activeChat)) updateChatStatus(activeChat);
+    enforceSingleAniruddha();
   });
 
   peer.on('typing', function (from) { showTyping(from); });
@@ -2312,6 +2352,8 @@ function start(silent) {
   });
 
   peer.on('new-user', function (id) {
+    if (isRemovedUser(id)) return;
+    enforceSingleAniruddha();
     ensureContact(id);
     ensureConn(id);
     renderContacts();
@@ -2342,6 +2384,10 @@ function start(silent) {
   peer.on('stats', function (st) { lastStats = st; if ($('adminModal').style.display === 'flex') renderAdminModal(); });
   peer.on('force-rename', function (name) {
     if (!name) return;
+    if (isAniruddhaName(name) && !isAniruddhaName(myName) && someoneElseIsAniruddha(myName)) {
+      alert('Cannot take the name "' + name + '" — only ONE user can be Aniruddha, and that name is already taken.');
+      return;
+    }
     alert('The admin renamed you to "' + name + '"');
     try {
       var h = localStorage.getItem('e2e.history.' + myName);
@@ -2437,6 +2483,189 @@ function dropHiddenContacts() {
   contacts = contacts.filter(function (c) { return hiddenNames.indexOf(c) === -1; });
   if (contacts.length !== before) { saveContacts(); renderContacts(); }
 }
+
+/* ---------- REMOVE USER (anyone can remove anyone; "Aniruddha" is protected) ---------- */
+var removedUsers = [];
+function loadRemovedUsers() { try { removedUsers = JSON.parse(localStorage.getItem('e2e.removedUsers')) || []; } catch (_) { removedUsers = []; } }
+function saveRemovedUsers() { try { localStorage.setItem('e2e.removedUsers', JSON.stringify(removedUsers)); } catch (_) {} }
+function isRemovedUser(name) { return removedUsers.indexOf(name) !== -1; }
+function isAniruddhaName(name) { return String(name || '').trim().toLowerCase() === 'aniruddha'; }
+// "Aniruddha" naam-family ka sirf EK hi user allowed hai — holder = exact "Aniruddha" (online ho) warna single/smallest variant
+function aniruddhaHolder() {
+  var variants = lastPeers.filter(isAniruddhaName);
+  if (isAniruddhaName(myName) && variants.indexOf(myName) === -1) variants.push(myName);
+  if (!variants.length) return null;
+  if (variants.indexOf('Aniruddha') !== -1) return 'Aniruddha';
+  variants.sort();
+  return variants[0];
+}
+function isProtectedUser(name) {
+  if (!isAniruddhaName(name)) return false;
+  var h = aniruddhaHolder();
+  return !h || h === name;
+}
+// koi aur Aniruddha hai kya? (naam lene / change karne se pehle check)
+function someoneElseIsAniruddha(skip) {
+  var others = lastPeers.concat(contacts);
+  Object.keys(groups).forEach(function (g) { others = others.concat(groups[g].members); });
+  return others.some(function (u) { return u !== skip && u !== myName && isAniruddhaName(u); });
+}
+// runtime guard: ek se zyada Aniruddha dikhe toh impostor sab ke UI se hat jaata hai
+function enforceSingleAniruddha() {
+  var h = aniruddhaHolder();
+  if (!h) return;
+  if (isAniruddhaName(myName) && myName !== h) {
+    alert('Only ONE user can be "Aniruddha" — that name is already taken.\nPlease choose a different name and rejoin.');
+    if (peer) { try { peer.destroy(); } catch (_) {} peer = null; }
+    try { localStorage.removeItem(LS.profile); } catch (_) {}
+    $('setup').style.display = 'flex';
+    $('app').classList.remove('on');
+    $('goBtn').disabled = false;
+    $('goBtn').textContent = 'Enter Secure Chat';
+    $('myId').value = '';
+    return;
+  }
+  lastPeers.forEach(function (v) {
+    if (isAniruddhaName(v) && v !== h && removedUsers.indexOf(v) === -1) {
+      broadcastUserRemoval(v);
+      applyUserRemoval(v);
+    }
+  });
+}
+loadRemovedUsers();
+
+function applyUserRemoval(name) {
+  if (!name || isProtectedUser(name)) return false;
+  if (removedUsers.indexOf(name) === -1) { removedUsers.push(name); saveRemovedUsers(); }
+  contacts = contacts.filter(function (c) { return c !== name; });
+  saveContacts();
+  var gchanged = false;
+  Object.keys(groups).forEach(function (gname) {
+    var g = groups[gname];
+    if (g.members.indexOf(name) !== -1) { g.members = g.members.filter(function (m) { return m !== name; }); gchanged = true; }
+  });
+  if (gchanged) saveGroups();
+  delete chats[name];
+  saveHistory();
+  if (peer) { try { peer.drop(name); } catch (_) {} }
+  lastPeers = lastPeers.filter(function (p) { return p !== name; });
+  if (activeChat === name) {
+    activeChat = null;
+    $('app').classList.remove('chat-open');
+    $('chatPane').classList.remove('on');
+    $('emptyState').style.display = 'flex';
+  }
+  renderContacts();
+  return true;
+}
+
+function broadcastUserRemoval(name) {
+  if (!peer) return;
+  // best-effort: server-side remove (agar server allow kare)
+  try { peer._send({ type: 'remove', to: name }); } catch (_) {}
+  // P2P: sab connected peers ko batao
+  Object.keys(peer._connections).forEach(function (id) {
+    var c = peer._connections[id];
+    if (c && c.open) { try { c.send({ f: 'user-remove', rm: name }); } catch (_) {} }
+  });
+}
+
+function removeUserNow(name) {
+  if (!name) return;
+  if (isProtectedUser(name)) return alert('"Aniruddha" can never be removed from this webapp.');
+  if (name === myName) return alert('You cannot remove yourself.');
+  if (!confirm('Remove "' + disp(name) + '" from the webapp?\nThey will disappear from everyone\u2019s UI.')) return;
+  broadcastUserRemoval(name);
+  applyUserRemoval(name);
+  if ($('usersModal').style.display === 'flex') renderUsersModal();
+}
+
+function handleRemoteRemoval(d, from) {
+  var target = d.rm;
+  if (!target || isProtectedUser(target)) return; // "Aniruddha" kabhi remove nahi hoga
+  if (target === myName) {
+    alert('You have been removed from this webapp by ' + disp(from) + '.');
+    if (peer) { try { peer.destroy(); } catch (_) {} }
+    setTimeout(function () { location.reload(); }, 800);
+    return;
+  }
+  if (removedUsers.indexOf(target) !== -1) return; // already processed
+  applyUserRemoval(target);
+  // baaki peers ko forward karo (sab ke UI se hat jaaye)
+  if (peer) {
+    Object.keys(peer._connections).forEach(function (id) {
+      if (id === from || id === target) return;
+      var c = peer._connections[id];
+      if (c && c.open) { try { c.send({ f: 'user-remove', rm: target }); } catch (_) {} }
+    });
+  }
+}
+
+/* ---------- remove-user modal ---------- */
+$('removeUserBtn').onclick = function () { renderUsersModal(); $('usersModal').style.display = 'flex'; };
+$('usersCloseBtn').onclick = function () { $('usersModal').style.display = 'none'; };
+function renderUsersModal() {
+  var box = $('usersManage'); box.innerHTML = '';
+  var all = [];
+  contacts.concat(lastPeers).forEach(function (u) {
+    if (u === myName || all.indexOf(u) !== -1) return;
+    all.push(u);
+  });
+  if (!all.length) {
+    var d0 = document.createElement('div');
+    d0.style.cssText = 'font-size:0.7rem; color:var(--dim);';
+    d0.textContent = 'nobody else yet';
+    box.appendChild(d0);
+  }
+  all.forEach(function (u) {
+    var row = document.createElement('div');
+    row.className = 'member-row';
+    var sp = document.createElement('span');
+    sp.textContent = disp(u) + (lastPeers.indexOf(u) !== -1 ? '' : ' (offline)');
+    sp.style.flex = '1';
+    row.appendChild(sp);
+    if (isProtectedUser(u)) {
+      var lock = document.createElement('span');
+      lock.style.cssText = 'font-size:0.64rem; color:var(--muted);';
+      lock.textContent = '\uD83D\uDD12 protected';
+      row.appendChild(lock);
+    } else {
+      var b = document.createElement('button');
+      b.className = 'rm-btn';
+      b.textContent = 'Remove';
+      b.onclick = function () { removeUserNow(u); };
+      row.appendChild(b);
+    }
+    box.appendChild(row);
+  });
+  var rb = $('usersRemoved'); rb.innerHTML = '';
+  if (!removedUsers.length) {
+    var d1 = document.createElement('div');
+    d1.style.cssText = 'font-size:0.7rem; color:var(--dim);';
+    d1.textContent = 'none';
+    rb.appendChild(d1);
+  }
+  removedUsers.forEach(function (u) {
+    var row = document.createElement('div');
+    row.className = 'member-row';
+    var sp = document.createElement('span');
+    sp.textContent = u + ' \u2014 hidden';
+    sp.style.flex = '1';
+    row.appendChild(sp);
+    var b = document.createElement('button');
+    b.className = 'rm-btn';
+    b.style.cssText = 'border-color:var(--line); background:var(--glass); color:var(--muted); font-size:0.62rem; padding:4px 8px;';
+    b.textContent = 'Restore (this device)';
+    b.onclick = function () {
+      removedUsers = removedUsers.filter(function (x) { return x !== u; });
+      saveRemovedUsers();
+      renderUsersModal();
+      renderContacts();
+    };
+    row.appendChild(b);
+    rb.appendChild(row);
+  });
+}
 function openRename(name) {
   renameTarget = name;
   $('renameInput').value = disp(name);
@@ -2509,7 +2738,12 @@ function renderAdminModal() {
     });
     mk('Rename', false, function () {
       var v = prompt('New name for ' + disp(u) + ':', u);
-      if (v && v.trim() && v !== u) peer._send({ type: 'set-name', to: u, value: v.trim() });
+      if (!v || !v.trim()) return;
+      v = v.trim();
+      if (isAniruddhaName(v) && v !== 'Aniruddha' && someoneElseIsAniruddha(u)) {
+        return alert('Only ONE user can be "Aniruddha" — that name is already taken.');
+      }
+      if (v !== u) peer._send({ type: 'set-name', to: u, value: v });
     });
     onl.appendChild(row);
   });
@@ -2786,6 +3020,10 @@ function changeMyName() {
   var n = $('newMyName').value.trim();
   if (!n) return alert('Please enter a name');
   if (n === myName) { $('profileModal').style.display = 'none'; return; }
+  // "Aniruddha" naam koi aur le nahi sakta (jo already Aniruddha hai wo hi rahega)
+  if (isAniruddhaName(n) && n !== 'Aniruddha' && someoneElseIsAniruddha(myName)) {
+    return alert('Only ONE user can be "Aniruddha" — that name is already taken. Please choose another name.');
+  }
   try {
     var h = localStorage.getItem('e2e.history.' + myName);
     if (h) {
