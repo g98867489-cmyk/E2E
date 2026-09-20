@@ -354,6 +354,8 @@
       <input type="checkbox" id="lanOnly" /> Sirf local network — bahar ka koi server nahi
     </label>
     <button class="btn" id="goBtn">Enter Secure Chat</button>
+    <div class="privacy-note" id="setupStatus" style="display:none;"></div>
+    <a href="#" id="setupReset" style="display:block; text-align:center; color:#5c5c70; font-size:0.66rem; text-decoration:none; margin-top:6px;">purane saved settings hatao (reset)</a>
     <div class="privacy-note">Doosre bande ko apne contacts mein add karke chat karo —<br/>messages/files/calls seedha browser-to-browser jaate hain</div>
   </div>
 </div>
@@ -918,8 +920,18 @@ function updateChatStatus(name) {
   $('dot').className = 'dot' + (on ? ' on' : '');
 }
 
+function ensureContact(name) {
+  // jab koi humse connect kare / message bheje, wo apne aap contact ban jaaye
+  if (!name || name === myName || contacts.indexOf(name) !== -1) return;
+  if (contacts.length >= 10) return;
+  contacts.push(name);
+  saveContacts();
+  renderContacts();
+}
+
 function wireConn(c) {
   var name = c.remoteId;
+  ensureContact(name);
   c.on('open', function () {
     if (activeChat === name) updateChatStatus(name);
     if (!chats[name] || !chats[name]._greeted) {
@@ -942,6 +954,7 @@ function wireConn(c) {
 }
 
 function receiveText(text, from) {
+  ensureContact(from);
   addEntry(from, { k: 't', w: 'them', who: from, s: text, time: now() });
 }
 
@@ -1298,13 +1311,34 @@ function start() {
   if (!myName) return alert('Apna naam daalo pehle!');
   saveProfile();
 
+  var srvUrl = $('serverUrl').value.trim();
+  $('goBtn').disabled = true;
+  $('goBtn').textContent = 'Connecting…';
+  $('setupStatus').style.display = 'block';
+  $('setupStatus').style.color = 'var(--muted)';
+  $('setupStatus').textContent = 'Server se connect ho rahe hain… (pehli baar ek minute tak lag sakta hai)';
+  var failTimer = setTimeout(function () {
+    $('goBtn').disabled = false;
+    $('goBtn').textContent = 'Enter Secure Chat';
+    $('setupStatus').style.color = 'var(--danger)';
+    $('setupStatus').textContent = '';
+    var hint = srvUrl.indexOf('wss://') !== 0
+      ? ' Ye URL galat type ka hai — https page se wss:// wala URL hi chalta hai (jaise wss://soh87.onrender.com). "purane saved settings hatao" try karo!'
+      : ' Server shayad so raha hai — 1 minute ruk ke phir try karo.';
+    $('setupStatus').textContent = 'Connect nahi ho paya: ' + srvUrl + '.' + hint;
+  }, 20000);
+
   peer = new e2e.Peer({
     id: myName,
-    server: $('serverUrl').value.trim(),
+    server: srvUrl,
     iceServers: $('lanOnly').checked ? [] : undefined
   });
 
   peer.on('open', function () {
+    clearTimeout(failTimer);
+    $('goBtn').disabled = false;
+    $('goBtn').textContent = 'Enter Secure Chat';
+    $('setupStatus').style.display = 'none';
     $('setup').style.display = 'none';
     $('app').classList.add('on');
     $('myNameEl').textContent = myName;
@@ -1384,6 +1418,14 @@ function log(kind, text) {
 }
 
 $('goBtn').onclick = start;
+$('setupReset').onclick = function (e) {
+  e.preventDefault();
+  if (!confirm('Saved naam / server / contacts / history sab hata dein?')) return;
+  Object.keys(localStorage).forEach(function (k) {
+    if (k.indexOf('e2e.') === 0) localStorage.removeItem(k);
+  });
+  location.reload();
+};
 $('myId').addEventListener('keydown', function (e) { if (e.key === 'Enter') start(); });
 $('resetBtn').onclick = function () {
   if (!confirm('Naam aur server bhool jaana hai? History bhi delete ho jaayegi.')) return;
@@ -1399,7 +1441,12 @@ loadContacts();
   var p = loadProfile();
   if (p && p.name) {
     $('myId').value = p.name;
-    $('serverUrl').value = p.server || 'ws://localhost:9000';
+    var srv = p.server || 'wss://soh87.onrender.com';
+    if (location.protocol === 'https:' && srv.indexOf('wss://') !== 0) {
+      // purana saved ws://localhost https page pe kabhi nahi chalega — default server laga do
+      srv = 'wss://soh87.onrender.com';
+    }
+    $('serverUrl').value = srv;
     $('lanOnly').checked = p.lan !== false;
     start();
   }
