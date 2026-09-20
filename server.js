@@ -14,8 +14,23 @@
 
 const http = require('http');
 const crypto = require('crypto');
+const fs = require('fs');
 
 const PORT = process.env.PORT || 9000;
+const MAX_USERS = Number(process.env.E2E_MAX || 30);   // max 30 people
+const STATE_FILE = '.e2e-state.json';
+
+// persistent state: who is the admin (first ever user) + banned users
+let state = { admin: null, banned: [], muted: [], passkey: null, lastSeen: {} };
+try {
+  state = Object.assign(state, JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')));
+  console.log(`[i] state loaded — admin: ${state.admin || 'none'}, banned: ${state.banned.length}`);
+} catch (_) {
+  console.log('[i] fresh state — first user to register becomes admin');
+}
+function saveState() {
+  try { fs.writeFileSync(STATE_FILE, JSON.stringify(state)); } catch (_) {}
+}
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
 // Connected peers: id -> ws connection object
@@ -120,12 +135,114 @@ function handleMessage(ws, msg) {
   if (msg.type === 'register') {
     const id = String(msg.id || '').trim();
     if (!id) return send({ type: 'error', error: 'no-id' });
+    if (state.banned.includes(id)) {
+      console.log(`[!] banned user tried to join: ${id}`);
+      return send({ type: 'error', error: 'banned' });
+    }
+    if (!state.admin) {
+      state.admin = id;
+      saveState();
+      console.log(`[*] FIRST USER — admin assigned: ${id}`);
+    }
+    if (!peers.has(id) && peers.size >= MAX_USERS) {
+      return send({ type: 'error', error: 'server-full' });
+    }
     if (peers.has(id)) return send({ type: 'error', error: 'id-taken' });
 
     ws.id = id;
     peers.set(id, ws);
-    console.log(`[+] registered: ${id}`);
-    return send({ type: 'registered', id });
+    console.log(`[+] registered: ${id} (${peers.size}/${MAX_USERS})`);
+    send({ type: 'registered', id, admin: state.admin === id, adminName: state.admin, muted: state.muted, passkey: state.passkey || 'saturn87' });
+    state.lastSeen[id] = Date.now();
+
+    // every new user auto-connects with the admin
+    if (state.admin && state.admin !== id && peers.has(state.admin)) {
+      sendFrame(peers.get(state.admin).socket, JSON.stringify({ type: 'new-user', id }));
+    }
+    return;
+  }
+
+  // ---- admin powers: ban / unban / banned-list ----
+  if (['ban', 'unban', 'banned-list'].includes(msg.type)) {
+    if (ws.id !== state.admin) return send({ type: 'error', error: 'not-admin' });
+
+    if (msg.type === 'ban') {
+      if (!state.banned.includes(msg.to)) state.banned.push(msg.to);
+      saveState();
+      const t = peers.get(msg.to);
+      if (t) {
+        sendFrame(t.socket, JSON.stringify({ type: 'banned' }));
+        peers.delete(msg.to);
+        setTimeout(() => { try { t.socket.destroy(); } catch (_) {} }, 150);
+      }
+      console.log(`[x] ${ws.id} banned ${msg.to}`);
+      return send({ type: 'ok', action: 'ban', to: msg.to });
+    }
+    if (msg.type === 'unban') {
+      state.banned = state.banned.filter((b) => b !== msg.to);
+      saveState();
+      console.log(`[+] ${ws.id} unbanned ${msg.to}`);
+      return send({ type: 'ok', action: 'unban', to: msg.to });
+    }
+    if (msg.type === 'banned-list') {
+      return send({ type: 'banned-list', ids: state.banned });
+    }
+  }
+
+  // ---- more admin powers ----
+  if (['broadcast', 'kick', 'mute', 'unmute', 'stats', 'set-passkey', 'set-name'].includes(msg.type)) {
+    if (ws.id !== state.admin) return send({ type: 'error', error: 'not-admin' });
+
+    if (msg.type === 'broadcast') {
+      const text = String(msg.text || '').slice(0, 500);
+      let n = 0;
+      [...peers.entries()].forEach(([pid, pws]) => {
+        if (pid === ws.id) return;
+        sendFrame(pws.socket, JSON.stringify({ type: 'broadcast', text, from: ws.id }));
+        n++;
+      });
+      console.log(`[!] ${ws.id} broadcast to ${n} users`);
+      return send({ type: 'ok', action: 'broadcast', count: n });
+    }
+    if (msg.type === 'kick') {
+      const t = peers.get(msg.to);
+      if (t) {
+        sendFrame(t.socket, JSON.stringify({ type: 'kicked' }));
+        peers.delete(msg.to);
+        setTimeout(() => { try { t.socket.destroy(); } catch (_) {} }, 150);
+      }
+      console.log(`[x] ${ws.id} kicked ${msg.to}`);
+      return send({ type: 'ok', action: 'kick', to: msg.to });
+    }
+    if (msg.type === 'mute' || msg.type === 'unmute') {
+      if (msg.type === 'mute') {
+        if (!state.muted.includes(msg.to)) state.muted.push(msg.to);
+      } else {
+        state.muted = state.muted.filter((m) => m !== msg.to);
+      }
+      saveState();
+      [...peers.values()].forEach((pws) => {
+        sendFrame(pws.socket, JSON.stringify({ type: 'muted-list', ids: state.muted }));
+      });
+      return send({ type: 'ok', action: msg.type, to: msg.to });
+    }
+    if (msg.type === 'stats') {
+      return send({ type: 'stats', online: [...peers.keys()], lastSeen: state.lastSeen });
+    }
+    if (msg.type === 'set-passkey') {
+      state.passkey = String(msg.value || '').trim().slice(0, 40) || 'saturn87';
+      saveState();
+      [...peers.values()].forEach((pws) => {
+        sendFrame(pws.socket, JSON.stringify({ type: 'passkey', value: state.passkey }));
+      });
+      console.log(`[key] ${ws.id} changed the passkey`);
+      return send({ type: 'ok', action: 'set-passkey' });
+    }
+    if (msg.type === 'set-name') {
+      const t = peers.get(msg.to);
+      if (t) sendFrame(t.socket, JSON.stringify({ type: 'force-rename', name: String(msg.value || '').slice(0, 30) }));
+      return send({ type: 'ok', action: 'set-name', to: msg.to });
+    }
   }
 
   if (!ws.id) return send({ type: 'error', error: 'not-registered' });
@@ -176,6 +293,7 @@ server.on('upgrade', (req, socket) => {
   socket.on('close', () => {
     if (ws.id) {
       peers.delete(ws.id);
+      if (!state.banned.includes(ws.id)) state.lastSeen[ws.id] = Date.now();
       console.log(`[-] disconnected: ${ws.id}`);
     }
   });
