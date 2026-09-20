@@ -484,7 +484,6 @@
       <div id="log"></div>
       <div id="emojiBar"></div>
       <div id="typing">typing…</div>
-      <div class="rec-tip" id="restrictBar" style="display:none; color:var(--muted);">waiting for admin approval — you cannot send yet</div>
       <div class="rec-tip" id="recTip">recording…</div>
       <div id="composer">
         <button id="emojiBtn" title="Emoji">
@@ -520,8 +519,6 @@
     <button class="btn" id="broadcastBtn" style="margin-top:4px;">Send broadcast</button>
     <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Online users</div>
     <div id="adminOnline" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
-    <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Removed users (need approval)</div>
-    <div id="adminRemoved" style="max-height:110px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"><div style="font-size:0.7rem; color:var(--dim);">none</div></div>
     <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Recently seen</div>
     <div id="adminSeen" style="max-height:100px; overflow-y:auto; font-size:0.72rem; color:var(--muted);"></div>
     <div style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;">Banned users</div>
@@ -585,6 +582,7 @@
     <input type="text" id="newMyName" placeholder="new name" autocomplete="off" />
     <button class="btn" id="saveNameBtn">Save changes</button>
     <button class="btn2" id="cancelNameBtn">Cancel</button>
+    <button class="btn2" id="clearDataBtn" style="margin-top:10px; border-color:rgba(255,255,255,0.35);">Clear all app data</button>
     <div class="modal-note">Changing your name reconnects you with the new name. Contacts and chat history stay.</div>
   </div>
 </div>
@@ -816,7 +814,7 @@
         this.adminName = msg.adminName || null;
         if (msg.passkey) this._emit('passkey', msg.passkey);
         if (msg.muted) this._emit('muted-list', msg.muted);
-        this._emit('restricted', !!msg.restricted);
+        if (msg.hidden) this._emit('hidden-list', msg.hidden);
         return this._emit('open', msg.id);
       }
       if (msg.type === 'error') return this._emit('error', new Error(msg.error));
@@ -828,8 +826,8 @@
       if (msg.type === 'broadcast') return this._emit('broadcast', msg);
       if (msg.type === 'kicked') return this._emit('kicked');
       if (msg.type === 'removed') return this._emit('removed');
-      if (msg.type === 'approved') return this._emit('approved');
       if (msg.type === 'muted-list') return this._emit('muted-list', msg.ids || []);
+      if (msg.type === 'hidden-list') return this._emit('hidden-list', msg.ids || []);
       if (msg.type === 'stats') return this._emit('stats', msg);
       if (msg.type === 'force-rename') return this._emit('force-rename', msg.name);
 
@@ -893,6 +891,18 @@ var LS = {
   contacts: 'e2e.contacts',
   history: function (me) { return 'e2e.history.' + me; }
 };
+
+/* storage version — badhne par sab purana mixed data ek hi baar mein saaf ho jaata hai */
+var LS_VERSION = 2;
+try {
+  var _v = parseInt(localStorage.getItem('e2e.v') || '0', 10) || 0;
+  if (_v < LS_VERSION) {
+    Object.keys(localStorage).forEach(function (k) {
+      if (k.indexOf('e2e.') === 0) localStorage.removeItem(k);
+    });
+  }
+  localStorage.setItem('e2e.v', String(LS_VERSION));
+} catch (_) {}
 
 /* ---------- helpers ---------- */
 function fmtSize(b) {
@@ -1229,9 +1239,9 @@ function connFor(name) { return peer._connections[name]; }
 function ensureConn(name) {
   if (!peer) return;
   var c = connFor(name);
-  if (c && (c.open || !c._failed)) return c;
+  if (c && c.open) return c;
   if (lastPeers.indexOf(name) !== -1) {
-    peer.drop(name);
+    if (c) peer.drop(name);
     c = peer.connect(name);
     wireConn(c);
   }
@@ -1482,7 +1492,6 @@ function flushQueue(name) {
 function sendMsg() {
   var text = $('msg').value.trim();
   if (!text || !activeChat) return;
-  if (restricted) return alert('Waiting for admin approval — you cannot send messages yet.');
   var mid = newMid();
   if (isGroup(activeChat)) {
     var g = groups[activeChat];
@@ -1683,7 +1692,6 @@ function maybeCompress(file) {
 }
 function sendFileActual(file) {
   if (!activeChat) return;
-  if (restricted) return alert('Waiting for admin approval — you cannot send yet.');
   var isG = isGroup(activeChat);
   var targets = [];
   if (isG) {
@@ -2055,6 +2063,7 @@ function showLock() {
 function hideLock() { $('lockScreen').classList.remove('on'); }
 function tryUnlock() {
   if ($('passkey').value.trim().toLowerCase() === String(PASSKEY).toLowerCase()) {
+    try { sessionStorage.setItem('e2e.session', '1'); } catch (_) {}
     hideLock();
   } else {
     $('passkey').classList.remove('err');
@@ -2201,6 +2210,15 @@ function start(silent) {
         ensureConn(name);
       }
     });
+    // offline queue safety net: koi pending message bhi miss na ho
+    Object.keys(loadQueue()).forEach(function (t) {
+      var targets = isGroup(t) ? (groups[t] ? groups[t].members : []) : [t];
+      targets.forEach(function (m) {
+        if (m === myName) return;
+        var mc = connFor(m);
+        if (mc && mc.open) flushQueue(m);
+      });
+    });
     if (activeChat && !isGroup(activeChat)) updateChatStatus(activeChat);
   });
 
@@ -2232,13 +2250,12 @@ function start(silent) {
       else addEntry(activeChat, { k: 'sys', s: 'Admin: ' + msg.text });
     }
   });
-  peer.on('restricted', function (v) { setRestricted(v); });
-  peer.on('approved', function () {
-    setRestricted(false, true);
-    alert('The admin approved you — chat unlocked!');
+  peer.on('hidden-list', function (ids) {
+    hiddenNames = ids;
+    dropHiddenContacts();
   });
   peer.on('removed', function () {
-    alert('The admin removed you. You can come back, but chat stays locked until approved.');
+    alert('The admin removed you. You can come back anytime — just open the app again.');
     if (peer) peer.destroy();
     setTimeout(function () { location.reload(); }, 600);
   });
@@ -2338,12 +2355,13 @@ $('myId').addEventListener('keydown', function (e) { if (e.key === 'Enter') star
 var renameTarget = null;
 var bannedList = [];
 var mutedNames = [];
-var restricted = false;
 var PASSKEY = 'saturn87';
-function setRestricted(v, silent) {
-  restricted = v;
-  $('restrictBar').style.display = v ? 'block' : 'none';
-  if (v && !silent) alert('You were removed by the admin.\nYou can browse and read, but cannot send messages until the admin approves you.');
+var hiddenNames = [];
+function dropHiddenContacts() {
+  if (!hiddenNames.length) return;
+  var before = contacts.length;
+  contacts = contacts.filter(function (c) { return hiddenNames.indexOf(c) === -1; });
+  if (contacts.length !== before) { saveContacts(); renderContacts(); }
 }
 function openRename(name) {
   renameTarget = name;
@@ -2378,7 +2396,6 @@ function timeAgo(ts) {
 }
 var lastStats = null;
 function renderAdminModal() {
-  var removedList = (lastStats && lastStats.removed) || [];
   var onl = $('adminOnline');
   onl.innerHTML = '';
   var others = lastPeers.filter(function (u) { return u !== myName; });
@@ -2393,9 +2410,8 @@ function renderAdminModal() {
     var row = document.createElement('div');
     row.className = 'member-row';
     row.style.flexWrap = 'wrap';
-    var isRemoved = removedList.indexOf(u) !== -1;
     var sp = document.createElement('span');
-    sp.textContent = disp(u) + (muted ? ' (muted)' : '') + (isRemoved ? ' (waiting)' : '');
+    sp.textContent = disp(u) + (muted ? ' (muted)' : '');
     sp.style.flex = '1';
     row.appendChild(sp);
     var mk = function (label, danger, fn) {
@@ -2410,9 +2426,8 @@ function renderAdminModal() {
       if (!confirm('Ban "' + disp(u) + '" from the webapp?')) return;
       peer._send({ type: 'ban', to: u });
     });
-    mk(isRemoved ? 'Approve' : 'Remove', false, function () {
-      if (isRemoved) { peer._send({ type: 'approve', to: u }); return; }
-      if (!confirm('Remove "' + disp(u) + '"? They can come back, but chat stays blocked until you Approve.')) return;
+    mk('Remove', false, function () {
+      if (!confirm('Remove "' + disp(u) + '"? They vanish from everyone until they come back.')) return;
       peer._send({ type: 'remove', to: u });
     });
     mk(muted ? 'Unmute' : 'Mute', false, function () {
@@ -2423,29 +2438,6 @@ function renderAdminModal() {
       if (v && v.trim() && v !== u) peer._send({ type: 'set-name', to: u, value: v.trim() });
     });
     onl.appendChild(row);
-  });
-  var rmv = $('adminRemoved');
-  rmv.innerHTML = '';
-  if (!removedList.length) {
-    var d3 = document.createElement('div');
-    d3.style.cssText = 'font-size:0.7rem; color:var(--dim);';
-    d3.textContent = 'none';
-    rmv.appendChild(d3);
-  }
-  removedList.forEach(function (u) {
-    var row = document.createElement('div');
-    row.className = 'member-row';
-    var sp = document.createElement('span');
-    sp.textContent = u + (lastPeers.indexOf(u) !== -1 ? ' (online)' : ' (offline)');
-    sp.style.flex = '1';
-    var btn = document.createElement('button');
-    btn.className = 'rm-btn';
-    btn.style.cssText = 'border-color:rgba(255,255,255,0.3); background:rgba(255,255,255,0.14); color:var(--text);';
-    btn.textContent = 'Approve';
-    btn.onclick = function () { peer._send({ type: 'approve', to: u }); };
-    row.appendChild(sp);
-    row.appendChild(btn);
-    rmv.appendChild(row);
   });
   var sn = $('adminSeen');
   sn.innerHTML = '';
@@ -2690,6 +2682,16 @@ $('avatarInput').addEventListener('change', function () {
   processAvatarFile(f, saveAvatar);
 });
 $('removePhotoBtn').onclick = function () { saveAvatar(null); };
+$('clearDataBtn').onclick = function () {
+  if (!confirm('This will DELETE all chats, contacts, groups and your profile from THIS browser.\nContinue?')) return;
+  if (!confirm('Really sure? This cannot be undone.')) return;
+  try {
+    Object.keys(localStorage).forEach(function (k) {
+      if (k.indexOf('e2e.') === 0) localStorage.removeItem(k);
+    });
+  } catch (_) {}
+  location.reload();
+};
 $('cancelNameBtn').onclick = function () { $('profileModal').style.display = 'none'; };
 function setMyAvatar() {
   var av = '';
@@ -2749,8 +2751,10 @@ loadRenames();
   }
 })();
 
-// incognito mode: hide everything behind the Saturn lock on every page load
-showLock();
+// incognito mode: Saturn lock sirf session pehle baar — reload pe dobara passkey nahi
+try {
+  if (sessionStorage.getItem('e2e.session') !== '1') showLock();
+} catch (_) { showLock(); }
 </script>
 </body>
 </html>
