@@ -1,0 +1,10 @@
+{
+  "name": "e2e",
+  "version": "0.5.0",
+  "description": "A tiny PeerJS-style WebRTC library: zero-dependency signaling server + browser client",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test-signaling.js"
+  }
+}
