@@ -684,14 +684,41 @@
       this.open = false;
       this._handlers = {};
       this._channel = null;
+      this._initiator = initiator;
+      this._lastRecv = Date.now();
+      this._hbTimers = [];
 
       this.pc = new RTCPeerConnection({ iceServers: iceServers });
+
+      var self = this;
+      // FIX: ICE fail hone par connection band karo, warna hamesha latki rehti hai
+      this.pc.oniceconnectionstatechange = function () {
+        if (self.pc.iceConnectionState === 'failed') {
+          try { if (self._channel) self._channel.close(); } catch (_) {}
+          try { self.pc.close(); } catch (_) {}
+          self.open = false;
+          self._emit('close');
+        }
+      };
 
       this.pc.onicecandidate = (e) => {
         if (e.candidate) {
           this.signaling._send({ type: 'candidate', to: this.remoteId, candidate: e.candidate });
         }
       };
+
+      // FIX: heartbeat — mara hua connection 45s mein pakda jaata hai, warna messages chupchap kho jaate hain
+      this._hbTimers.push(setInterval(function () {
+        if (self.open && self._channel) { try { self._channel.send('{"f":"hb"}'); } catch (_) {} }
+      }, 20000));
+      this._hbTimers.push(setInterval(function () {
+        if (self.open && Date.now() - self._lastRecv > 45000) {
+          try { if (self._channel) self._channel.close(); } catch (_) {}
+          try { self.pc.close(); } catch (_) {}
+          self.open = false;
+          self._emit('close');
+        }
+      }, 10000));
 
       if (initiator) {
         this._channel = this.pc.createDataChannel('e2e');
@@ -714,6 +741,7 @@
       ch.onopen = () => { this.open = true; this._emit('open'); };
       ch.onclose = () => { this.open = false; this._emit('close'); };
       ch.onmessage = (e) => {
+        this._lastRecv = Date.now();
         if (typeof e.data === 'string') {
           var data;
           try { data = JSON.parse(e.data); } catch (_) { return this._emit('data', e.data); }
@@ -751,7 +779,11 @@
       return new Promise(function (r) { ch.addEventListener('bufferedamountlow', r, { once: true }); });
     }
 
-    close() { try { this.pc.close(); } catch (_) {} }
+    close() {
+      this._hbTimers.forEach(function (t) { clearInterval(t); });
+      this._hbTimers = [];
+      try { this.pc.close(); } catch (_) {}
+    }
     on(evt, fn) { (this._handlers[evt] = this._handlers[evt] || []).push(fn); return this; }
     _emit(evt, arg) { (this._handlers[evt] || []).forEach(function (fn) { fn(arg); }); }
   }
@@ -772,7 +804,11 @@
       var self = this;
       this._ws = new WebSocket(this.serverUrl);
       this._ws.onopen = function () { self._send({ type: 'register', id: self.id }); };
-      this._ws.onmessage = function (e) { self._onMessage(JSON.parse(e.data)); };
+      this._ws.onmessage = function (e) {
+        var msg;
+        try { msg = JSON.parse(e.data); } catch (_) { return; }
+        self._onMessage(msg);
+      };
       this._ws.onclose = function () {
         if (self._closed) return;
         self._emit('disconnected');
@@ -788,7 +824,11 @@
       return conn;
     }
 
-    drop(remoteId) { delete this._connections[remoteId]; }
+    drop(remoteId) {
+      var c = this._connections[remoteId];
+      if (c) { try { c.close(); } catch (_) {} }
+      delete this._connections[remoteId];
+    }
 
     sendMedia(remoteId, msg) {
       this._send(Object.assign({}, msg, { tag: 'media', to: remoteId }));
@@ -847,6 +887,14 @@
 
       if (msg.type === 'offer') {
         var conn = this._connections[from];
+        if (conn && conn.open) return;
+        if (conn && conn._initiator) {
+          // glare: dono ne ek saath offer bheja — bade id ka offer jeeta
+          if (this.id > from) return;
+          try { conn.close(); } catch (_) {}
+          delete this._connections[from];
+          conn = null;
+        }
         if (!conn) {
           conn = new E2EConnection(this.id, from, this, false, this.iceServers);
           this._connections[from] = conn;
@@ -1003,8 +1051,10 @@ function addGroupEntry(gname, entry, opts) {
 function renderContacts() {
   var listEl = $('contactList');
   listEl.innerHTML = '';
+  var pendQ = loadQueue();
   contacts.forEach(function (name) {
     var online = lastPeers.indexOf(name) !== -1;
+    var pend = (pendQ[name] && pendQ[name].length) || 0;
     var c = chats[name] || (chats[name] = { list: [], unread: 0 });
     var last = c.list.length ? c.list[c.list.length - 1] : null;
     var preview = last ? (last.k === 't' ? last.s : (last.k === 'f' ? '(file) ' + last.name : last.s)) : 'no messages yet';
@@ -1016,7 +1066,8 @@ function renderContacts() {
         '<div class="c-name">' + esc(disp(name)) + '<span class="c-dot' + (online ? ' on' : '') + '"></span></div>' +
         '<div class="c-last">' + esc(preview) + '</div>' +
       '</div>' +
-      (c.unread ? '<div class="badge">' + c.unread + '</div>' : '');
+      (c.unread ? '<div class="badge">' + c.unread + '</div>' : '') +
+      (pend ? '<div class="badge" style="background:rgba(255,255,255,0.08); color:var(--muted);">⏳' + pend + '</div>' : '');
     var rx = document.createElement('span');
     rx.className = 'rx';
     rx.title = 'Rename';
@@ -1283,6 +1334,7 @@ function wireConn(c) {
   });
   c.on('data', function (d) {
     if (d instanceof ArrayBuffer) return handleChunk(d, name);
+    if (d && d.f === 'hb') return;
     if (d && d.g) return handleGroupData(d, name);
     if (d && d.f === 'read') return markRead(name, d.mid);
     if (d && d.f === 'react') return markReact(name, d.mid, d.e);
@@ -1293,6 +1345,12 @@ function wireConn(c) {
   });
   c.on('close', function () {
     peer.drop(name);
+    if (incoming[name]) {
+      var inc = incoming[name];
+      incoming[name] = null;
+      if (inc.sizeEl) inc.sizeEl.textContent = 'transfer cancelled';
+      if (inc.bar) inc.bar.style.opacity = '0.35';
+    }
     if (activeChat === name) updateChatStatus(name);
     renderContacts();
   });
@@ -1449,6 +1507,7 @@ function queueMsg(to, text, mid) {
   var q = loadQueue();
   q[to] = q[to] || [];
   q[to].push({ t: text, mid: mid });
+  if (q[to].length > 50) q[to] = q[to].slice(-50);
   saveQueue(q);
 }
 function markMidsDelivered(store, items) {
@@ -1605,13 +1664,15 @@ $('micBtn').onclick = function () {
     rec.ondataavailable = function (e) { if (e.data && e.data.size) recChunks.push(e.data); };
     rec.onstop = function () {
       stream.getTracks().forEach(function (t) { t.stop(); });
-      var blob = new Blob(recChunks, { type: 'audio/webm' });
+      var mt = rec.mimeType || 'audio/webm';
+      var blob = new Blob(recChunks, { type: mt });
       rec = null;
       clearInterval(recTimer);
       $('micBtn').classList.remove('rec');
       $('recTip').style.display = 'none';
       if (blob.size > 800) {
-        sendFile(new File([blob], 'voice-' + Date.now() + '.webm', { type: 'audio/webm' }));
+        var ext = mt.indexOf('mp4') !== -1 ? '.m4a' : '.webm';
+        sendFile(new File([blob], 'voice-' + Date.now() + ext, { type: mt }));
       }
     };
     rec.start();
@@ -1641,6 +1702,10 @@ $('emojiBtn').onclick = function (ev) {
   $('emojiBtn').classList.toggle('on');
 };
 document.addEventListener('click', askNotif, { once: true });
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) return;
+  if (activeChat && !isGroup(activeChat)) sendReadReceipts(activeChat);
+});
 document.addEventListener('click', function (ev) {
   if (!$('emojiBar').contains(ev.target) && !$('emojiBtn').contains(ev.target)) {
     $('emojiBar').classList.remove('on');
@@ -1921,6 +1986,13 @@ function startCall(kind) {
 
 function newMediaPC() {
   mediaPC = new RTCPeerConnection({ iceServers: peer.iceServers });
+  mediaPC.oniceconnectionstatechange = function () {
+    if (mediaPC && mediaPC.iceConnectionState === 'failed' && callState.active) {
+      try { if (callTarget && peer) peer.sendMedia(callTarget, { type: 'bye' }); } catch (_) {}
+      cleanupCall();
+      alert('Call connection failed — please try again.');
+    }
+  };
   mediaCandQueue.splice(0).forEach(function (c) { mediaPC.addIceCandidate(c).catch(function () {}); });
   mediaPC.onicecandidate = function (e) {
     if (e.candidate) peer.sendMedia(callTarget, { type: 'candidate', candidate: e.candidate });
@@ -2063,7 +2135,7 @@ function showLock() {
 function hideLock() { $('lockScreen').classList.remove('on'); }
 function tryUnlock() {
   if ($('passkey').value.trim().toLowerCase() === String(PASSKEY).toLowerCase()) {
-    try { sessionStorage.setItem('e2e.session', '1'); } catch (_) {}
+    try { localStorage.setItem('e2e.session', '1'); } catch (_) {}
     hideLock();
   } else {
     $('passkey').classList.remove('err');
@@ -2131,6 +2203,7 @@ $('newContactName').addEventListener('keydown', function (e) { if (e.key === 'En
 var peersTimer = null;
 
 function start(silent) {
+  if (peer) return;
   myName = $('myId').value.trim();
   if (!myName) return alert('Please enter your name first!');
   saveProfile();
@@ -2308,9 +2381,10 @@ function start(silent) {
     }
     if (m === 'id-taken') {
       alert('This name is already in use — try another name.\n(Tip: close the old tab using it)');
+      if (peer) { try { peer.destroy(); } catch (_) {} peer = null; }
       localStorage.removeItem(LS.profile);
       $('setup').style.display = 'flex';
-      $('app').classList.remove('on');
+      $('app').style.display = 'none';
     }
     // any other error: auto-reconnect chalu rahega, sidebar status dikhata hai
   });
@@ -2751,9 +2825,19 @@ loadRenames();
   }
 })();
 
-// incognito mode: Saturn lock sirf session pehle baar — reload pe dobara passkey nahi
+// FIX: iPhone/iOS keyboard — body height sahi rakho, composer kabhi dhaka na jaaye
+function vvFix() {
+  try { document.body.style.height = (window.visualViewport ? window.visualViewport.height : window.innerHeight) + 'px'; } catch (_) {}
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', vvFix);
+  vvFix();
+}
+
+// Saturn lock: sirf us browser pehle baar jisme kabhi unlock nahi kiya
+// ek baar naam daal ke connect = hamesha ke liye unlocked (naye tab mein bhi)
 try {
-  if (sessionStorage.getItem('e2e.session') !== '1') showLock();
+  if (localStorage.getItem('e2e.session') !== '1') showLock();
 } catch (_) { showLock(); }
 </script>
 </body>
